@@ -73,12 +73,12 @@
             <img src="f1cat.jpg" alt="F1 Sakura Trip" class="w-full h-full object-cover">
             
             <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex flex-col justify-end p-6">
-                <div class="text-white">
-                    <div class="flex items-center gap-2 mb-1">
-                        <span class="bg-primary px-2 py-0.5 rounded-lg text-xs font-bold">5 Days</span>
-                        <span class="text-sm font-medium opacity-90">2025.04.05 - 04.09</span>
+                <div class="text-white text-right"> 
+                    <div class="flex items-center justify-end gap-2 mb-1">
+                        <span class="bg-primary px-2 py-0.5 rounded-lg text-xs font-bold">15 Days</span>
+                        <span class="text-sm font-medium opacity-90">2025.03.21 - 04.04</span>
                     </div>
-                    <h1 class="text-2xl font-black tracking-wide drop-shadow-md">東京・名古屋 F1 櫻花旅</h1>
+                    <h1 class="text-2xl font-black tracking-wide drop-shadow-md">日本 F1 櫻花自由行</h1>
                 </div>
             </div>
         </header>
@@ -195,13 +195,16 @@
                             <i class="ri-government-fill text-3xl text-blue-500"></i>
                             <div class="font-bold text-sm">駐日代表處</div>
                         </div>
-                        <div class="bg-white p-4 rounded-2xl shadow-card flex flex-col items-center text-center gap-2 border border-white active:scale-95 transition">
-                            <i class="ri-file-list-3-line text-3xl text-textMain"></i>
-                            <div class="font-bold text-sm">飯店訂單</div>
-                        </div>
-                        <div class="bg-white p-4 rounded-2xl shadow-card flex flex-col items-center text-center gap-2 border border-white active:scale-95 transition">
+                        
+                        <div class="bg-white p-4 rounded-2xl shadow-card flex flex-col items-center text-center gap-2 border border-white active:scale-95 transition"
+                            @click="toggleModal('flight')">
                             <i class="ri-plane-fill text-3xl text-textMain"></i>
-                            <div class="font-bold text-sm">航班資訊</div>
+                            <div class="font-bold text-sm">航班資訊 (點擊)</div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl shadow-card flex flex-col items-center text-center gap-2 border border-white active:scale-95 transition"
+                             @click="toggleModal('lodging')">
+                            <i class="ri-hotel-fill text-3xl text-textMain"></i>
+                            <div class="font-bold text-sm">住宿訂單 (點擊)</div>
                         </div>
                     </div>
                 </div>
@@ -229,6 +232,35 @@
                             <i :class="w.icon" class="text-2xl my-1 block" :style="{color: w.color}"></i>
                             <div class="font-bold text-textMain">{{ w.temp }}</div>
                             <div class="inline-block text-[10px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded mt-1">{{ w.rain }}</div>
+                            <div class="text-[10px] text-gray-500 mt-1">體感: {{ w.feels }}°C</div>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+
+            <transition name="fade">
+                <div v-if="modal.isVisible" class="fixed inset-0 z-[2000] bg-black/50 backdrop-blur-sm flex items-center justify-center p-5" @click.self="modal.isVisible = false">
+                    <div class="bg-white rounded-3xl p-6 w-full max-w-sm shadow-float transform transition-all scale-100 opacity-100 lg:max-w-md">
+                        <h3 class="text-xl font-black mb-4 flex justify-between items-center">
+                            <span><i :class="modal.icon" class="text-primary mr-2"></i> {{ modal.title }}</span>
+                            <button @click="modal.isVisible = false" class="text-gray-400 hover:text-gray-600"><i class="ri-close-line text-2xl"></i></button>
+                        </h3>
+                        <div v-if="modal.type === 'flight'" class="space-y-4">
+                            <div v-for="(flight, f_idx) in flightInfo" :key="f_idx" class="border-b pb-3" :class="{'pt-3': f_idx > 0}">
+                                <div class="flex items-center text-sm font-bold mb-1" :class="{'text-primary': flight.type === 'departure', 'text-blue-500': flight.type === 'return'}">
+                                    <i :class="flight.type === 'departure' ? 'ri-flight-takeoff-line' : 'ri-flight-land-line'" class="mr-2"></i> {{ flight.type === 'departure' ? '去程' : '回程' }} ({{ flight.date }})
+                                </div>
+                                <p class="text-xs text-textLight ml-5">
+                                    {{ flight.time }} {{ flight.from }} <i class="ri-arrow-right-line text-xs"></i> {{ flight.to }}<br>
+                                    **{{ flight.flight }}** ({{ flight.class }})
+                                </p>
+                            </div>
+                        </div>
+                        <div v-if="modal.type === 'lodging'" class="space-y-3 max-h-80 overflow-y-auto">
+                            <div v-for="(lodging, l_idx) in lodgingInfo" :key="l_idx" class="bg-secondary p-3 rounded-xl">
+                                <p class="text-xs text-textLight">{{ lodging.dates }} • {{ lodging.location }}</p>
+                                <p class="font-bold text-sm">{{ lodging.name }}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -255,39 +287,77 @@
                 const currentTab = ref('itinerary');
                 const currentDay = ref(0);
                 const newItemInput = ref('');
+                
+                // Modal State
+                const modal = ref({
+                    isVisible: false,
+                    type: '', // 'flight' or 'lodging'
+                    title: '',
+                    icon: ''
+                });
 
-                const tabs = [
-                    { id: 'itinerary', name: '行程', icon: 'ri-map-pin-time-line' },
-                    { id: 'guide', name: '指南', icon: 'ri-suitcase-line' },
-                    { id: 'weather', name: '天氣', icon: 'ri-cloud-windy-line' }
-                ];
+                // --- 1. NEW FLIGHT & LODGING DATA ---
+                const flightInfo = ref([
+                    { type: 'departure', date: '03/21', time: '10:55', from: 'TPE 桃園國際機場T2', to: 'NRT 成田機場T2', flight: 'JL802', class: '經濟艙S' },
+                    { type: 'return', date: '04/04', time: '18:20', from: 'HND 東京羽田機場T3', to: 'TSA 松山機場T1', flight: 'JL099', class: '經濟艙S' }
+                ]);
 
+                const lodgingInfo = ref([
+                    { dates: '3/21-3/22', name: '秋葉原雷姆飯店', location: '東京' },
+                    { dates: '3/23', name: '東京迪士尼海洋夢幻泉鄉大飯店 夢幻館', location: '東京迪士尼' },
+                    { dates: '3/24', name: '東京灣大倉酒店', location: '東京灣' },
+                    { dates: '3/25-3/26', name: '名古屋三井花園飯店', location: '名古屋' },
+                    { dates: '3/27-3/29', name: '名古屋站前APA飯店', location: '名古屋' },
+                    { dates: '3/30-4/3', name: 'Sotetsu Fresa Inn大門站', location: '東京' }
+                ]);
+
+
+                // --- 2. UPDATED ITINERARY DATA (Reflecting new dates/lodging) ---
+                // Note: Only key dates/locations are detailed for this prototype.
                 const itineraryData = [
                     {
-                        date: '04/05',
-                        location: '東京 Tokyo',
-                        advice: '入夜約 12°C，建議風衣外套。乾燥無雨，適合戶外。',
+                        date: '03/21',
+                        location: '東京 Akihabara',
+                        advice: '抵達日。請預先規劃NRT到秋葉原雷姆飯店的交通方式。',
                         spots: [
-                            { type: 'activity', category: '抵達', time: '14:00', name: '成田機場落地', desc: '領取 JR Pass，搭乘 NEX 前往新宿', mapLink: 'https://goo.gl/maps/Tokyo' },
-                            { type: 'food', category: '晚餐', time: '19:00', name: '敘敘苑 晴空塔店', desc: '30F 高空景觀燒肉，俯瞰東京夜景。', tag: '必吃牛舌', tagType: 'eat', tagIcon: 'ri-restaurant-line', photoTip: '將肉片貼近窗戶，背景虛化夜景拍攝。', mapLink: 'https://goo.gl/maps/skytree' },
-                            { type: 'shop', category: '購物', time: '21:30', name: '唐吉訶德 淺草店', desc: '24H 營業，補給零食與藥妝。', tag: '必買藥妝', tagType: 'buy', tagIcon: 'ri-shopping-bag-3-line', mapLink: 'https://goo.gl/maps/donki' }
+                            { type: 'activity', category: '交通', time: '10:55', name: 'JL802 桃園出發', desc: '日本航空 JL802 經濟艙S，14:55抵達NRT。', mapLink: 'https://www.google.com/maps/search/TPE' },
+                            { type: 'activity', category: '酒店', time: '16:30', name: '秋葉原雷姆飯店 Check-in', desc: '飯店直結JR車站，完成入住手續。', mapLink: 'https://goo.gl/maps/remmakihabara' },
+                            { type: 'food', category: '晚餐', time: '19:00', name: '秋葉原站周邊美食', desc: '尋找特色拉麵或居酒屋。', mapLink: 'https://goo.gl/maps/akihabara' }
                         ]
                     },
                     {
-                        date: '04/06',
+                        date: '03/22',
+                        location: '東京 Akihabara',
+                        advice: '全天市區活動。',
+                        spots: [
+                            { type: 'activity', category: '景點', time: '10:00', name: '秋葉原自由活動', desc: '可安排動漫、電器購物或周邊觀光。', mapLink: 'https://goo.gl/maps/akihabara' }
+                        ]
+                    },
+                    {
+                        date: '03/23',
+                        location: '東京迪士尼海洋',
+                        advice: '轉換飯店日。提前預約迪士尼 Fast Pass。',
+                        spots: [
+                            { type: 'activity', category: '交通', time: '10:00', name: '前往迪士尼', desc: 'Check out 後搭車前往新飯店。', mapLink: 'https://goo.gl/maps/disney' },
+                            { type: 'activity', category: '酒店', time: '15:00', name: '迪士尼夢幻泉鄉 Check-in', desc: '入住夢幻館，感受夢幻泉鄉主題！', mapLink: 'https://goo.gl/maps/fantasysprings' }
+                        ]
+                    },
+                    {
+                        date: '03/25',
                         location: '移動日 → 名古屋',
-                        advice: '多雲轉雨 (60%)。請務必攜帶折疊傘，鞋子建議防水。',
+                        advice: '從東京前往名古屋，新幹線移動日。',
                         spots: [
-                            { type: 'activity', category: '交通', time: '09:00', name: '新幹線前往名古屋', desc: '右側座位可看富士山。', mapLink: 'https://goo.gl/maps/nagoya' },
-                            { type: 'pic', category: '景點', time: '14:00', name: '名古屋城', desc: '金鯱與櫻花的絕美搭配。', tag: '櫻花名所', tagType: 'snap', tagIcon: 'ri-camera-line', mapLink: 'https://goo.gl/maps/nagoyacastle' }
+                            { type: 'activity', category: '交通', time: '10:00', name: '新幹線前往名古屋', desc: '從東京前往名古屋，購買鐵路便當。', mapLink: 'https://www.google.com/maps/search/tokyo+station' },
+                            { type: 'activity', category: '酒店', time: '15:00', name: '名古屋三井花園 Check-in', desc: '飯店鄰近車站，方便隔日行程。', mapLink: 'https://goo.gl/maps/mitsuigarden' }
                         ]
                     },
                     {
-                        date: '04/07',
-                        location: '鈴鹿 Suzuka',
-                        advice: '賽道無遮蔽，紫外線強。請戴帽、墨鏡，穿舒適球鞋。',
+                        date: '04/04',
+                        location: '東京羽田 HND',
+                        advice: '回程日，預留充足時間辦理登機。',
                         spots: [
-                            { type: 'f1', category: 'F1 正賽', time: '14:00', name: 'JAPANESE GP', desc: 'V2 看台。請提早 3 小時進場體驗氛圍。', tag: 'RACE DAY', tagType: 'f1', tagIcon: 'ri-flag-2-fill', photoTip: '賽車極快，快門建議 1/1000s 以上。', mapLink: 'https://goo.gl/maps/suzuka' }
+                            { type: 'activity', category: '交通', time: '15:00', name: '前往羽田機場', desc: '從大門站前往 HND，預留兩小時。', mapLink: 'https://www.google.com/maps/search/HND' },
+                            { type: 'activity', category: '交通', time: '18:20', name: 'JL099 羽田出發', desc: '日本航空 JL099 經濟艙S，20:40抵達TSA', mapLink: 'https://www.google.com/maps/search/TSA' }
                         ]
                     }
                 ];
@@ -301,10 +371,31 @@
                 ]);
 
                 const weatherData = [
-                    { day: 1, date: '04/05', icon: 'ri-sun-line', color: 'orange', temp: '12°/18°', rain: '10%' },
-                    { day: 2, date: '04/06', icon: 'ri-showers-line', color: '#6fa8dc', temp: '14°/16°', rain: '60%' },
-                    { day: 3, date: '04/07', icon: 'ri-sun-cloudy-line', color: 'orange', temp: '15°/22°', rain: '20%' },
+                    { day: 1, date: '03/21', icon: 'ri-sun-line', color: 'orange', temp: '10°/16°', rain: '10%', feels: 14 },
+                    { day: 2, date: '03/22', icon: 'ri-cloudy-line', color: '#666', temp: '9°/15°', rain: '20%', feels: 13 },
+                    { day: 3, date: '03/23', icon: 'ri-showers-line', color: '#6fa8dc', temp: '11°/14°', rain: '70%', feels: 12 },
+                    { day: 4, date: '03/25', icon: 'ri-sun-cloudy-line', color: 'orange', temp: '15°/22°', rain: '20%', feels: 20 },
+                    { day: 5, date: '04/04', icon: 'ri-cloudy-line', color: '#666', temp: '14°/18°', rain: '30%', feels: 17 }
                 ];
+                
+                const tabs = [
+                    { id: 'itinerary', name: '行程', icon: 'ri-map-pin-time-line' },
+                    { id: 'guide', name: '指南', icon: 'ri-suitcase-line' },
+                    { id: 'weather', name: '天氣', icon: 'ri-cloud-windy-line' }
+                ];
+
+                // Modal Toggle Function
+                const toggleModal = (type) => {
+                    modal.value.type = type;
+                    if (type === 'flight') {
+                        modal.value.title = '航班資訊 (日本航空)';
+                        modal.value.icon = 'ri-flight-takeoff-line';
+                    } else if (type === 'lodging') {
+                        modal.value.title = '全程住宿訂單';
+                        modal.value.icon = 'ri-hotel-line';
+                    }
+                    modal.value.isVisible = true;
+                };
 
                 const addItem = () => {
                     if (newItemInput.value.trim()) {
@@ -326,7 +417,11 @@
                     newItemInput,
                     addItem,
                     deleteItem,
-                    weatherData
+                    weatherData,
+                    flightInfo, // Exposed new data
+                    lodgingInfo, // Exposed new data
+                    modal,
+                    toggleModal
                 };
             }
         }).mount('#app');
