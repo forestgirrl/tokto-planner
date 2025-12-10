@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2026 日本F1櫻花自由行</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        sakura: {
+                            light: '#fff0f5', // 淺粉
+                            DEFAULT: '#ffb7c5', // 櫻花粉
+                            dark: '#ff9eb5',
+                        },
+                        warm: {
+                            gray: '#f5f5f0', // 暖灰背景
+                            white: '#ffffff',
+                            text: '#4a4a4a'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Zen Maru Gothic"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #f5f5f0; /* 暖灰底色 */
+            color: #4a4a4a;
+            -webkit-font-smoothing: antialiased;
+            padding-bottom: 80px; /* 為底部導覽留空間 */
+        }
+        
+        /* 隱藏 Scrollbar 但保持滑動 */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* 模擬 App 點擊效果 */
+        .active-press:active {
+            transform: scale(0.98);
+            transition: transform 0.1s;
+        }
+
+        /* 卡片陰影 */
+        .card-shadow {
+            box-shadow: 0 4px 15px rgba(255, 183, 197, 0.15);
+        }
+
+        /* 轉場動畫 */
+        .fade-enter-active, .fade-leave-active {
+            transition: opacity 0.3s ease;
+        }
+        .fade-enter-from, .fade-leave-to {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app" class="relative min-h-screen">
+
+    <header class="relative w-full z-0">
+        <div class="h-[250px] w-full overflow-hidden relative">
+            <img :src="headerImage" @error="headerImage='https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=1920&auto=format&fit=crop'" class="w-full h-full object-cover" alt="Header">
+            
+            <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+
+            <div class="absolute bottom-10 right-4 text-right text-white drop-shadow-md">
+                <h1 class="text-2xl font-bold tracking-wider">2026 日本F1櫻花自由行</h1>
+                <p class="text-sm opacity-90">2026.03.21 - 04.04</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="relative z-10 -mt-6 bg-[#f5f5f0] rounded-t-[30px] min-h-[calc(100vh-250px)] px-4 pt-6 overflow-hidden">
+        
+        <div v-if="currentTab === 'itinerary'">
+            
+            <div class="flex overflow-x-auto hide-scrollbar space-x-3 pb-4 mb-2">
+                <div v-for="(day, index) in itineraryDays" :key="index" 
+                     @click="selectedDayIndex = index"
+                     :class="['flex-shrink-0 w-16 h-20 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all duration-300 card-shadow', 
+                              selectedDayIndex === index ? 'bg-sakura text-white' : 'bg-white text-gray-500']">
+                    <span class="text-sm font-bold">{{ getDayOfWeek(day.date) }}</span>
+                    <span class="text-2xl font-bold">{{ getDayDate(day.date) }}</span>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-4 mb-6 flex items-center justify-between card-shadow bg-gradient-to-r from-blue-50 to-white">
+                <div class="flex items-center">
+                    <i :class="weatherIcon" class="text-3xl mr-4 text-yellow-400"></i>
+                    <div>
+                        <p class="text-xs text-gray-400">{{ currentItineraryDay.location }} 天氣</p>
+                        <p class="font-bold text-lg">{{ weatherTemp }}°C <span class="text-xs text-gray-400 font-normal">體感 {{ weatherFeelsLike }}°C</span></p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">預測</span>
+                </div>
+            </div>
+
+            <div class="space-y-4 pb-20">
+                <div v-for="(event, index) in currentItineraryDay.events" :key="event.id" 
+                     draggable="true" @dragstart="dragStart(index)" @dragover.prevent @drop="drop(index)"
+                     class="relative">
+                    
+                    <div v-if="index > 0 || (index === 0 && currentItineraryDay.prevHotel)" class="flex items-center justify-center py-2 text-xs text-gray-400 space-x-2">
+                        <div class="h-4 w-[1px] bg-gray-300"></div>
+                        <i :class="event.transportType === 'walk' ? 'fa-person-walking' : 'fa-train'" class="text-sakura"></i>
+                        <span>{{ event.travelTime }}</span>
+                        <div class="h-4 w-[1px] bg-gray-300"></div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-4 card-shadow active-press relative overflow-hidden border-l-4"
+                         :class="getCategoryColor(event.category)">
+                        
+                        <div class="absolute top-3 right-3 flex space-x-2">
+                            <button @click="editEvent(event)" class="text-gray-300 hover:text-gray-500"><i class="fa-solid fa-pen"></i></button>
+                        </div>
+
+                        <div v-if="index === 0 && event.category === 'flight'" class="flex flex-col">
+                             <div class="flex justify-between items-center mb-2">
+                                <span class="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-lg font-bold"> <i class="fa-solid fa-plane"></i> 航班</span>
+                             </div>
+                             <div class="flex justify-between items-center">
+                                <div class="text-center">
+                                    <h3 class="text-xl font-bold">{{ event.depCode }}</h3>
+                                    <p class="text-xs text-gray-500">{{ event.startTime }}</p>
+                                </div>
+                                <div class="flex-1 px-4 flex flex-col items-center">
+                                    <span class="text-xs text-gray-400">{{ event.duration }}</span>
+                                    <div class="w-full h-[1px] bg-gray-300 relative">
+                                        <i class="fa-solid fa-plane absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                                    </div>
+                                    <span class="text-xs text-sakura font-bold">{{ event.flightNo }}</span>
+                                </div>
+                                <div class="text-center">
+                                    <h3 class="text-xl font-bold">{{ event.arrCode }}</h3>
+                                    <p class="text-xs text-gray-500">{{ event.endTime }}</p>
+                                </div>
+                             </div>
+                        </div>
+
+                        <div v-else @click="openGoogleMaps(event.name)">
+                            <div class="flex items-start mb-2">
+                                <span class="text-xs font-bold px-2 py-0.5 rounded text-white mr-2" 
+                                      :style="{ backgroundColor: getCategoryHex(event.category) }">
+                                    {{ getCategoryName(event.category) }}
+                                </span>
+                                <span v-if="event.tags && event.tags.includes('必吃')" class="text-[10px] border border-red-400 text-red-400 px-1 rounded mr-1">必吃</span>
+                                <span v-if="event.tags && event.tags.includes('必買')" class="text-[10px] border border-blue-400 text-blue-400 px-1 rounded mr-1">必買</span>
+                                <span v-if="event.tags && event.tags.includes('必拍')" class="text-[10px] border border-purple-400 text-purple-400 px-1 rounded mr-1">必拍</span>
+                            </div>
+                            
+                            <h3 class="text-lg font-bold text-gray-800 mb-1">{{ event.name }}</h3>
+                            
+                            <div class="text-sm text-gray-500 space-y-1">
+                                <p v-if="event.time"><i class="fa-regular fa-clock w-5 text-center"></i> {{ event.time }}</p>
+                                <p v-if="event.ticket"><i class="fa-solid fa-ticket w-5 text-center text-yellow-500"></i> {{ event.ticket }}</p>
+                                <p v-if="event.note" class="text-gray-400 text-xs mt-2 bg-gray-50 p-2 rounded"><i class="fa-solid fa-circle-info mr-1"></i> {{ event.note }}</p>
+                            </div>
+
+                            <div class="mt-3 flex justify-end">
+                                <button class="bg-blue-500 text-white text-xs px-3 py-1.5 rounded-full shadow-md active-press flex items-center">
+                                    <i class="fa-solid fa-location-arrow mr-1"></i> 導航
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="currentItineraryDay.events.length === 0" class="text-center py-10 text-gray-400">
+                    <p>今天還沒有行程喔！</p>
+                </div>
+            </div>
+
+            <button @click="showAddEventModal = true" class="fixed bottom-24 right-4 bg-sakura text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-sakura-dark transition active-press z-20">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </div>
+
+        <div v-if="currentTab === 'map'" class="h-[60vh] bg-gray-200 rounded-2xl flex items-center justify-center relative overflow-hidden">
+             <div class="absolute inset-0 bg-cover bg-center opacity-50" style="background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Map_of_Japan_with_prefectures_blank.svg/1200px-Map_of_Japan_with_prefectures_blank.svg.png');"></div>
+             <div class="z-10 text-center p-4 bg-white/90 rounded-xl shadow-lg">
+                 <h3 class="font-bold text-lg mb-2">行程地圖總覽</h3>
+                 <p class="text-sm text-gray-600 mb-4">點擊下方開啟 Google Maps App</p>
+                 <a href="https://www.google.com/maps/d/u/0/" target="_blank" class="bg-blue-500 text-white px-4 py-2 rounded-full shadow">
+                     <i class="fa-solid fa-map-location-dot mr-2"></i> 開啟地圖
+                 </a>
+             </div>
+        </div>
+
+        <div v-if="currentTab === 'expenses'">
+            <div class="bg-white rounded-2xl p-6 mb-6 text-center card-shadow">
+                <p class="text-gray-500 text-sm">總花費 (JPY)</p>
+                <h2 class="text-4xl font-bold text-sakura-dark mt-2">¥{{ totalExpenses.toLocaleString() }}</h2>
+            </div>
+            
+            <div class="space-y-3 pb-20">
+                <div v-for="expense in expenses" :key="expense.id" class="bg-white rounded-xl p-4 flex justify-between items-center card-shadow">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mr-3 text-lg">
+                            <i :class="getExpenseIcon(expense.category)" class="text-gray-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold">{{ expense.name }}</p>
+                            <p class="text-xs text-gray-400">{{ expense.date }} • {{ expense.method }}</p>
+                        </div>
+                    </div>
+                    <span class="font-bold text-gray-700">¥{{ expense.amount.toLocaleString() }}</span>
+                </div>
+            </div>
+
+            <button @click="showAddExpenseModal = true" class="fixed bottom-24 right-4 bg-yellow-400 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-yellow-500 transition active-press z-20">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </div>
+
+        <div v-if="currentTab === 'shopping'">
+            <div class="grid grid-cols-2 gap-4 pb-20">
+                <div v-for="item in shoppingList" :key="item.id" class="bg-white rounded-xl overflow-hidden card-shadow">
+                    <div class="h-32 bg-gray-200 relative">
+                        <img v-if="item.image" :src="item.image" class="w-full h-full object-cover">
+                        <div v-else class="w-full h-full flex items-center justify-center text-gray-400">
+                            <i class="fa-solid fa-image text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="p-3">
+                        <h4 class="font-bold text-sm mb-1">{{ item.name }}</h4>
+                        <label class="flex items-center text-xs text-gray-500">
+                            <input type="checkbox" v-model="item.bought" class="mr-2 accent-sakura"> 已購買
+                        </label>
+                    </div>
+                </div>
+            </div>
+             <button @click="showAddShoppingModal = true" class="fixed bottom-24 right-4 bg-purple-400 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-purple-500 transition active-press z-20">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </div>
+
+        <div v-if="currentTab === 'info'" class="space-y-4 pb-20">
+            
+            <div class="bg-white rounded-2xl p-4 card-shadow">
+                <h3 class="font-bold text-sakura-dark mb-3"><i class="fa-solid fa-coins mr-2"></i>匯率換算</h3>
+                <div class="flex items-center space-x-2">
+                    <div class="flex-1">
+                        <label class="text-xs text-gray-400">日幣 (JPY)</label>
+                        <input type="number" v-model="currencyInput" @input="calculateRate" class="w-full bg-gray-50 rounded p-2 mt-1 border border-gray-200 outline-none focus:border-sakura">
+                    </div>
+                    <i class="fa-solid fa-arrow-right-long text-gray-400 mt-5"></i>
+                    <div class="flex-1">
+                        <label class="text-xs text-gray-400">台幣 (TWD)</label>
+                        <div class="w-full bg-gray-100 rounded p-2 mt-1 font-bold">{{ currencyOutput }}</div>
+                    </div>
+                </div>
+                <p class="text-xs text-right text-gray-400 mt-2">匯率: 0.22 (範例)</p>
+            </div>
+
+            <div class="bg-white rounded-2xl p-4 card-shadow">
+                <h3 class="font-bold text-blue-500 mb-3"><i class="fa-solid fa-plane-departure mr-2"></i>航班資訊</h3>
+                
+                <div class="mb-4 border-b border-gray-100 pb-3">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded">去程 3/21</span>
+                        <span class="text-xs font-bold">JL802</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="text-lg font-bold">10:55</div>
+                            <div class="text-xs text-gray-500">TPE T2</div>
+                        </div>
+                        <div class="text-xs text-gray-400">--- 3h 00m ---</div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold">14:55</div>
+                            <div class="text-xs text-gray-500">NRT T2</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded">回程 4/04</span>
+                        <span class="text-xs font-bold">JL099</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="text-lg font-bold">18:20</div>
+                            <div class="text-xs text-gray-500">HND T3</div>
+                        </div>
+                        <div class="text-xs text-gray-400">--- 3h 20m ---</div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold">20:40</div>
+                            <div class="text-xs text-gray-500">TSA T1</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-4 card-shadow">
+                <h3 class="font-bold text-purple-500 mb-3"><i class="fa-solid fa-bed mr-2"></i>住宿資訊</h3>
+                <ul class="space-y-3">
+                    <li v-for="hotel in hotelList" :key="hotel" class="flex justify-between items-center text-sm border-b border-gray-50 pb-2 last:border-0">
+                        <span>{{ hotel }}</span>
+                        <a :href="'https://www.google.com/maps/search/?api=1&query='+hotel" target="_blank" class="text-blue-500"><i class="fa-solid fa-location-dot"></i></a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="bg-white rounded-2xl p-4 card-shadow border-l-4 border-red-400">
+                <h3 class="font-bold text-red-500 mb-2"><i class="fa-solid fa-briefcase-medical mr-2"></i>緊急聯絡</h3>
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <a href="tel:110" class="bg-red-50 p-2 rounded-lg text-red-600 font-bold block">
+                        <i class="fa-solid fa-user-shield block text-xl mb-1"></i> 警察 110
+                    </a>
+                    <a href="tel:119" class="bg-red-50 p-2 rounded-lg text-red-600 font-bold block">
+                        <i class="fa-solid fa-truck-medical block text-xl mb-1"></i> 救護 119
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <nav class="fixed bottom-0 w-full bg-white border-t border-gray-100 pb-safe pt-2 z-50 rounded-t-2xl shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+        <div class="flex justify-around items-center h-16">
+            <button v-for="tab in tabs" :key="tab.id" @click="currentTab = tab.id" 
+                    class="flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors duration-300 relative">
+                
+                <div v-if="currentTab === tab.id" class="absolute -top-2 w-8 h-1 bg-sakura rounded-b-lg"></div>
+
+                <i :class="[tab.icon, currentTab === tab.id ? 'text-sakura' : 'text-gray-400']" class="text-xl transition-transform duration-200" :style="currentTab === tab.id ? 'transform: translateY(-2px)' : ''"></i>
+                <span class="text-[10px] font-medium" :class="currentTab === tab.id ? 'text-sakura' : 'text-gray-400'">{{ tab.name }}</span>
+            </button>
+        </div>
+        <div class="h-4 w-full bg-white"></div>
+    </nav>
+
+
+    <div v-if="showAddEventModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center pointer-events-none">
+        <div class="absolute inset-0 bg-black/50 pointer-events-auto" @click="closeEventModal"></div>
+        <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl p-6 relative pointer-events-auto transform transition-all shadow-2xl">
+            <h3 class="text-xl font-bold mb-4">{{ isEditing ? '編輯行程' : '新增行程' }}</h3>
+            
+            <div class="space-y-3 max-h-[60vh] overflow-y-auto">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">類別</label>
+                    <div class="flex space-x-2 overflow-x-auto pb-2">
+                        <button v-for="cat in categories" :key="cat.id" 
+                                @click="newEvent.category = cat.id"
+                                :class="['px-3 py-1.5 rounded-full text-xs whitespace-nowrap border', newEvent.category === cat.id ? 'bg-sakura text-white border-sakura' : 'border-gray-300 text-gray-500']">
+                            {{ cat.name }}
+                        </button>
+                    </div>
+                </div>
+                <input v-model="newEvent.name" placeholder="名稱 (例如: 淺草寺)" class="w-full border p-2 rounded-lg">
+                <input v-model="newEvent.time" type="time" class="w-full border p-2 rounded-lg">
+                <input v-model="newEvent.ticket" placeholder="門票資訊 (選填)" class="w-full border p-2 rounded-lg">
+                <textarea v-model="newEvent.note" placeholder="備註/特色" class="w-full border p-2 rounded-lg h-20"></textarea>
+                
+                <div v-if="isEditing" class="pt-2 border-t mt-2">
+                    <button @click="confirmDeleteEvent" class="text-red-500 text-sm flex items-center"><i class="fa-solid fa-trash mr-2"></i> 刪除此行程</button>
+                </div>
+            </div>
+
+            <div class="mt-6 flex space-x-3">
+                <button @click="closeEventModal" class="flex-1 py-3 bg-gray-100 rounded-xl text-gray-600 font-bold">取消</button>
+                <button @click="saveEvent" class="flex-1 py-3 bg-sakura text-white rounded-xl font-bold shadow-md">儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="showAddExpenseModal" class="fixed inset-0 z-50 flex items-end justify-center">
+        <div class="absolute inset-0 bg-black/50" @click="showAddExpenseModal = false"></div>
+        <div class="bg-white w-full rounded-t-2xl p-6 relative z-10">
+            <h3 class="text-xl font-bold mb-4">記帳</h3>
+            <div class="space-y-3">
+                <select v-model="newExpense.category" class="w-full border p-2 rounded-lg bg-white">
+                    <option value="food">飲食</option>
+                    <option value="transport">交通</option>
+                    <option value="shopping">購物</option>
+                    <option value="hotel">住宿</option>
+                    <option value="ticket">門票</option>
+                    <option value="other">其他</option>
+                </select>
+                <input v-model="newExpense.name" placeholder="項目名稱" class="w-full border p-2 rounded-lg">
+                <input v-model.number="newExpense.amount" type="number" placeholder="金額 (JPY)" class="w-full border p-2 rounded-lg">
+                <div class="flex space-x-2">
+                     <button @click="newExpense.method='cash'" :class="newExpense.method==='cash' ? 'bg-green-500 text-white' : 'bg-gray-100'" class="flex-1 py-2 rounded-lg text-sm">現金</button>
+                     <button @click="newExpense.method='card'" :class="newExpense.method==='card' ? 'bg-blue-500 text-white' : 'bg-gray-100'" class="flex-1 py-2 rounded-lg text-sm">信用卡</button>
+                </div>
+            </div>
+            <button @click="addExpense" class="w-full mt-4 py-3 bg-yellow-400 text-white rounded-xl font-bold">新增記錄</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const { createApp, ref, computed } = Vue;
+
+    createApp({
+        setup() {
+            const headerImage = ref('./f1cat.jpg'); // 請放置圖片於此
+            const currentTab = ref('itinerary');
+            const showAddEventModal = ref(false);
+            const showAddExpenseModal = ref(false);
+            const showAddShoppingModal = ref(false);
+            
+            // 行程相關狀態
+            const selectedDayIndex = ref(0);
+            const isEditing = ref(false);
+            const editingEventId = ref(null);
+            
+            // 匯率
+            const currencyInput = ref(0);
+            const exchangeRate = 0.22; // 假定匯率
+
+            // Tabs 定義
+            const tabs = [
+                { id: 'itinerary', name: '行程', icon: 'fa-solid fa-list-check' },
+                { id: 'map', name: '地圖', icon: 'fa-regular fa-map' },
+                { id: 'expenses', name: '花費', icon: 'fa-solid fa-yen-sign' },
+                { id: 'shopping', name: '購物', icon: 'fa-solid fa-bag-shopping' },
+                { id: 'info', name: '資訊', icon: 'fa-solid fa-circle-info' }
+            ];
+
+            // 類別定義
+            const categories = [
+                { id: 'spot', name: '景點', color: '#FFB7C5' },
+                { id: 'food', name: '美食', color: '#FFD700' },
+                { id: 'shopping', name: '購物', color: '#BA55D3' },
+                { id: 'hotel', name: '住宿', color: '#9370DB' },
+                { id: 'transport', name: '交通', color: '#87CEEB' },
+                { id: 'flight', name: '航班', color: '#4169E1' }
+            ];
+
+            // 完整行程資料 (Data from Prompt)
+            const itineraryDays = ref([
+                { date: '2026-03-21', location: '東京/秋葉原', prevHotel:null, events: [
+                    { id: 1, category: 'flight', name: '去程航班 JL802', depCode:'TPE', arrCode:'NRT', startTime:'10:55', endTime:'14:55', duration:'3h00m', flightNo:'JL802', tags:[], transportType:'train', travelTime:'約 1hr' },
+                    { id: 2, category: 'hotel', name: '秋葉原 Check-in', time:'16:00', note:'先放行李', tags:[], transportType:'walk', travelTime:'10 min' },
+                    { id: 3, category: 'food', name: '秋葉原晚餐', note:'附近美食', tags:['必吃'], transportType:'walk', travelTime:'5 min' },
+                    { id: 4, category: 'shopping', name: '秋葉原動漫挖寶', note:'Radio Kaikan, Animate', tags:['必買'], transportType:'walk', travelTime:'5 min' },
+                    { id: 5, category: 'hotel', name: '秋葉原雷姆飯店', note:'住宿', tags:[], transportType:'', travelTime:'' }
+                ]},
+                { date: '2026-03-22', location: '東京', prevHotel:'秋葉原雷姆飯店', events: [
+                    { id: 10, category: 'food', name: '築地市場', time:'09:00', note:'吃海鮮', tags:['必吃'], transportType:'train', travelTime:'30 min (從秋葉原)' },
+                    { id: 11, category: 'spot', name: '初音演唱會', time:'11:00', note:'LaLa arena TOKYO-BAY, 12:00開始', ticket:'已購票', tags:['必拍'], transportType:'train', travelTime:'50 min' },
+                    { id: 12, category: 'food', name: 'LaLaPort 用餐逛街', time:'15:00', note:'', tags:[], transportType:'train', travelTime:'10 min' },
+                    { id: 13, category: 'spot', name: '錦糸公園', time:'16:30', note:'櫻花+晴空塔', tags:['必拍'], transportType:'train', travelTime:'20 min' },
+                    { id: 14, category: 'spot', name: '江戶 NOREN', time:'18:00', note:'兩國站, 江戶風情', tags:[], transportType:'train', travelTime:'10 min' },
+                    { id: 15, category: 'food', name: '晚餐: 炸豬排/相撲鍋', note:'Hasegawa / Kirishima', tags:['必吃'], transportType:'train', travelTime:'15 min' },
+                    { id: 16, category: 'hotel', name: '秋葉原雷姆飯店', note:'', tags:[], transportType:'', travelTime:'' }
+                ]},
+                { date: '2026-03-23', location: '舞濱', prevHotel:'秋葉原雷姆飯店', events: [
+                    { id: 21, category: 'shopping', name: '伊克斯皮兒莉購物中心', time:'11:00', note:'舞濱站', tags:[], transportType:'train', travelTime:'40 min' },
+                    { id: 22, category: 'spot', name: 'Disney Land', time:'14:00', note:'簡單玩, 看煙火', tags:['必拍'], transportType:'walk', travelTime:'10 min' },
+                    { id: 23, category: 'hotel', name: '迪士尼海洋夢幻泉鄉大飯店', note:'夢幻館', tags:[], transportType:'walk', travelTime:'15 min' }
+                ]},
+                { date: '2026-03-24', location: '迪士尼', prevHotel:'迪士尼海洋夢幻泉鄉', events: [
+                    { id: 31, category: 'spot', name: 'Disney Sea', time:'09:00', note:'整天遊玩', tags:['必玩'], transportType:'walk', travelTime:'0 min' },
+                    { id: 32, category: 'hotel', name: '東京灣大倉酒店', note:'含早餐', tags:[], transportType:'walk', travelTime:'15 min' }
+                ]},
+                { date: '2026-03-25', location: '名古屋', prevHotel:'東京灣大倉酒店', events: [
+                    { id: 41, category: 'transport', name: '新幹線 (東京->名古屋)', time:'09:30', note:'從舞濱到東京站轉車', tags:[], transportType:'train', travelTime:'2 hrs' },
+                    { id: 42, category: 'spot', name: '山崎川 四季之道', time:'13:00', note:'散步賞櫻 (石川橋-新瑞橋)', tags:['必拍'], transportType:'train', travelTime:'30 min' },
+                    { id: 43, category: 'spot', name: '三輪神社 & 大須商店街', time:'15:00', note:'萬松寺通, 赤門通', tags:['必買'], transportType:'train', travelTime:'20 min' },
+                    { id: 44, category: 'hotel', name: '名古屋三井花園飯店', note:'含早餐', tags:[], transportType:'train', travelTime:'15 min' }
+                ]},
+                { date: '2026-03-26', location: '名古屋/鈴鹿', prevHotel:'名古屋三井花園飯店', events: [
+                    { id: 51, category: 'spot', name: 'F1 鈴鹿賽道', time:'13:00', note:'下午前往', tags:['必看'], transportType:'train', travelTime:'1 hr' },
+                    { id: 52, category: 'hotel', name: '名古屋三井花園飯店', note:'含早餐', tags:[], transportType:'train', travelTime:'1 hr' }
+                ]},
+                { date: '2026-03-27', location: '名古屋', prevHotel:'名古屋三井花園飯店', events: [
+                    { id: 61, category: 'hotel', name: 'APA 飯店 (寄放行李)', time:'09:00', note:'名古屋站前', tags:[], transportType:'walk', travelTime:'10 min' },
+                    { id: 62, category: 'spot', name: '名古屋城 & 綠洲21', time:'10:00', note:'MIRAI TOWER', tags:['必拍'], transportType:'train', travelTime:'20 min' },
+                    { id: 63, category: 'food', name: '午餐: 鰻魚飯', note:'', tags:['必吃'], transportType:'', travelTime:'' },
+                    { id: 64, category: 'shopping', name: '榮町逛街 & PARCO', note:'', tags:['必買'], transportType:'walk', travelTime:'10 min' },
+                    { id: 65, category: 'food', name: '晚餐: 矢場味噌豬排', note:'', tags:['必吃'], transportType:'walk', travelTime:'10 min' },
+                    { id: 66, category: 'hotel', name: 'APA Hotel Nagoya Ekimae', note:'', tags:[], transportType:'train', travelTime:'15 min' }
+                ]},
+                { date: '2026-03-28', location: 'F1鈴鹿', prevHotel:'APA Hotel Nagoya Ekimae', events: [
+                    { id: 71, category: 'spot', name: 'F1 鈴鹿賽道 (排位賽)', time:'09:00', note:'整天', tags:['必看'], transportType:'train', travelTime:'1 hr' },
+                    { id: 72, category: 'hotel', name: 'APA Hotel Nagoya Ekimae', note:'', tags:[], transportType:'train', travelTime:'1 hr' }
+                ]},
+                { date: '2026-03-29', location: 'F1鈴鹿', prevHotel:'APA Hotel Nagoya Ekimae', events: [
+                    { id: 81, category: 'spot', name: 'F1 鈴鹿賽道 (決賽)', time:'09:00', note:'整天', tags:['必看'], transportType:'train', travelTime:'1 hr' },
+                    { id: 82, category: 'hotel', name: 'APA Hotel Nagoya Ekimae', note:'', tags:[], transportType:'train', travelTime:'1 hr' }
+                ]},
+                { date: '2026-03-30', location: '東京', prevHotel:'APA Hotel Nagoya Ekimae', events: [
+                    { id: 91, category: 'transport', name: '新幹線 (名古屋->東京)', time:'10:00', note:'回東京市區', tags:[], transportType:'train', travelTime:'2 hrs' },
+                    { id: 92, category: 'hotel', name: 'Sotetsu Fresa Inn 大門站', time:'15:00', note:'Check in', tags:[], transportType:'train', travelTime:'30 min' }
+                ]},
+                { date: '2026-03-31', location: '東京/吉祥寺', prevHotel:'Sotetsu Fresa Inn 大門站', events: [
+                    { id: 101, category: 'spot', name: '吉卜力美術館', time:'10:00', note:'三鷹', tags:['必拍'], transportType:'train', travelTime:'40 min' },
+                    { id: 102, category: 'spot', name: '吉祥寺 & 井之頭公園', time:'13:00', note:'賞櫻', tags:['必拍'], transportType:'walk', travelTime:'15 min' },
+                    { id: 103, category: 'shopping', name: '中野逛街', time:'16:00', note:'新井藥師公園賞櫻', tags:['必買'], transportType:'train', travelTime:'15 min' },
+                    { id: 104, category: 'hotel', name: 'Sotetsu Fresa Inn 大門站', note:'', tags:[], transportType:'train', travelTime:'30 min' }
+                ]},
+                { date: '2026-04-01', location: '東京/上野', prevHotel:'Sotetsu Fresa Inn 大門站', events: [
+                    { id: 111, category: 'spot', name: '上野公園', time:'09:00', note:'賞櫻', tags:['必拍'], transportType:'train', travelTime:'20 min' },
+                    { id: 112, category: 'food', name: '根津烏龍麵 釜竹', time:'12:00', note:'午餐', tags:['必吃'], transportType:'walk', travelTime:'15 min' },
+                    { id: 113, category: 'spot', name: '根津神社 & 谷中銀座', time:'14:00', note:'開運谷中堂(招財貓)', tags:['必買'], transportType:'walk', travelTime:'10 min' },
+                    { id: 114, category: 'hotel', name: 'Sotetsu Fresa Inn 大門站', note:'', tags:[], transportType:'train', travelTime:'25 min' }
+                ]},
+                { date: '2026-04-02', location: '東京/新宿', prevHotel:'Sotetsu Fresa Inn 大門站', events: [
+                    { id: 121, category: 'spot', name: '新宿御苑', time:'10:00', note:'賞櫻', tags:['必拍'], transportType:'train', travelTime:'20 min' },
+                    { id: 122, category: 'shopping', name: '原宿 & 澀谷逛街', time:'14:00', note:'', tags:['必買'], transportType:'train', travelTime:'10 min' },
+                    { id: 123, category: 'hotel', name: 'Sotetsu Fresa Inn 大門站', note:'', tags:[], transportType:'train', travelTime:'20 min' }
+                ]},
+                { date: '2026-04-03', location: '東京/中野', prevHotel:'Sotetsu Fresa Inn 大門站', events: [
+                    { id: 131, category: 'shopping', name: '中野動漫挖寶', time:'11:00', note:'補貨', tags:['必買'], transportType:'train', travelTime:'30 min' },
+                    { id: 132, category: 'hotel', name: 'Sotetsu Fresa Inn 大門站', note:'', tags:[], transportType:'train', travelTime:'30 min' }
+                ]},
+                { date: '2026-04-04', location: '返程', prevHotel:'Sotetsu Fresa Inn 大門站', events: [
+                    { id: 141, category: 'shopping', name: '東京車站', time:'10:00', note:'最後採買', tags:['必買'], transportType:'train', travelTime:'15 min' },
+                    { id: 142, category: 'flight', name: '回程航班 JL099', depCode:'HND', arrCode:'TSA', startTime:'18:20', endTime:'20:40', duration:'3h20m', flightNo:'JL099', tags:[], transportType:'train', travelTime:'前往羽田 15:00出發' }
+                ]},
+            ]);
+
+            // 花費 Data
+            const expenses = ref([
+                { id: 1, category: 'food', name: '拉麵', date:'3/21', amount: 1200, method: 'cash' },
+                { id: 2, category: 'transport', name: '西瓜卡儲值', date:'3/21', amount: 3000, method: 'cash' }
+            ]);
+            const newExpense = ref({ category: 'food', name: '', amount: null, method: 'cash' });
+
+            // 購物清單 Data
+            const shoppingList = ref([
+                { id: 1, name: '感冒藥', bought: false, image: null },
+                { id: 2, name: 'F1 周邊帽子', bought: false, image: null }
+            ]);
+
+            // 住宿列表 (For Info Tab)
+            const hotelList = [
+                '秋葉原雷姆飯店 (Remm Akihabara)',
+                '東京迪士尼海洋夢幻泉鄉大飯店',
+                '東京灣大倉酒店 (Hotel Okura Tokyo Bay)',
+                '名古屋三井花園飯店',
+                '名古屋站前 APA 飯店',
+                'Sotetsu Fresa Inn 大門站'
+            ];
+
+            // 新增行程暫存
+            const newEvent = ref({
+                name: '', category: 'spot', time: '', ticket: '', note: ''
+            });
+
+            // --- Computed ---
+            const currentItineraryDay = computed(() => {
+                return itineraryDays.value[selectedDayIndex.value];
+            });
+
+            const totalExpenses = computed(() => {
+                return expenses.value.reduce((acc, curr) => acc + curr.amount, 0);
+            });
+
+            const currencyOutput = computed(() => {
+                if(!currencyInput.value) return 0;
+                return (currencyInput.value * exchangeRate).toFixed(0);
+            });
+
+            const weatherTemp = computed(() => {
+                // 模擬隨機氣溫
+                const base = currentItineraryDay.value.location.includes('名古屋') ? 16 : 14;
+                return base + Math.floor(Math.random() * 3);
+            });
+
+            const weatherFeelsLike = computed(() => weatherTemp.value - 2);
+
+            const weatherIcon = computed(() => {
+                const icons = ['fa-sun', 'fa-cloud-sun', 'fa-cloud'];
+                return 'fa-solid ' + icons[Math.floor(Math.random() * icons.length)];
+            });
+
+            // --- Methods ---
+            
+            const getDayOfWeek = (dateStr) => {
+                const date = new Date(dateStr);
+                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                return days[date.getDay()];
+            };
+
+            const getDayDate = (dateStr) => {
+                const date = new Date(dateStr);
+                return date.getDate();
+            };
+
+            const getCategoryColor = (catId) => {
+                const map = {
+                    'spot': 'border-l-sakura',
+                    'food': 'border-l-yellow-400',
+                    'shopping': 'border-l-purple-400',
+                    'hotel': 'border-l-purple-600',
+                    'transport': 'border-l-blue-300',
+                    'flight': 'border-l-blue-600'
+                };
+                return map[catId] || 'border-l-gray-300';
+            };
+            
+            const getCategoryHex = (catId) => {
+                const cat = categories.find(c => c.id === catId);
+                return cat ? cat.color : '#ccc';
+            };
+
+            const getCategoryName = (catId) => {
+                const cat = categories.find(c => c.id === catId);
+                return cat ? cat.name : '';
+            };
+
+            const getExpenseIcon = (catId) => {
+                const map = {
+                    'food': 'fa-utensils',
+                    'transport': 'fa-train-subway',
+                    'shopping': 'fa-bag-shopping',
+                    'hotel': 'fa-bed',
+                    'ticket': 'fa-ticket',
+                    'other': 'fa-circle-question'
+                };
+                return 'fa-solid ' + (map[catId] || 'fa-circle');
+            };
+
+            const openGoogleMaps = (name) => {
+                const query = encodeURIComponent(name);
+                window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+            };
+
+            const calculateRate = () => {
+                // computed property auto handles logic
+            };
+
+            // Drag and Drop Logic
+            let draggedItemIndex = null;
+            const dragStart = (index) => {
+                draggedItemIndex = index;
+            };
+            const drop = (index) => {
+                const items = currentItineraryDay.value.events;
+                const draggedItem = items[draggedItemIndex];
+                items.splice(draggedItemIndex, 1);
+                items.splice(index, 0, draggedItem);
+                draggedItemIndex = null;
+                // 在這裡可以重新計算交通時間的邏輯
+            };
+
+            // Modal Logic
+            const editEvent = (event) => {
+                isEditing.value = true;
+                editingEventId.value = event.id;
+                newEvent.value = { ...event };
+                showAddEventModal.value = true;
+            };
+
+            const closeEventModal = () => {
+                showAddEventModal.value = false;
+                isEditing.value = false;
+                newEvent.value = { name: '', category: 'spot', time: '', ticket: '', note: '' };
+            };
+
+            const saveEvent = () => {
+                if (isEditing.value) {
+                    const idx = currentItineraryDay.value.events.findIndex(e => e.id === editingEventId.value);
+                    if (idx !== -1) {
+                        currentItineraryDay.value.events[idx] = { ...newEvent.value, id: editingEventId.value };
+                    }
+                } else {
+                    const id = Date.now();
+                    currentItineraryDay.value.events.push({ ...newEvent.value, id, transportType: 'walk', travelTime: '計算中' });
+                }
+                closeEventModal();
+            };
+
+            const confirmDeleteEvent = () => {
+                if (confirm('確定要刪除這個行程嗎？')) {
+                    const idx = currentItineraryDay.value.events.findIndex(e => e.id === editingEventId.value);
+                    if (idx !== -1) {
+                        currentItineraryDay.value.events.splice(idx, 1);
+                    }
+                    closeEventModal();
+                }
+            };
+
+            const addExpense = () => {
+                if(newExpense.value.name && newExpense.value.amount) {
+                    const date = new Date();
+                    expenses.value.unshift({
+                        id: Date.now(),
+                        ...newExpense.value,
+                        date: `${date.getMonth()+1}/${date.getDate()}`
+                    });
+                    showAddExpenseModal.value = false;
+                    newExpense.value = { category: 'food', name: '', amount: null, method: 'cash' };
+                }
+            };
+
+            return {
+                headerImage,
+                currentTab,
+                tabs,
+                selectedDayIndex,
+                itineraryDays,
+                currentItineraryDay,
+                weatherTemp, weatherFeelsLike, weatherIcon,
+                categories,
+                expenses, newExpense, totalExpenses,
+                shoppingList,
+                currencyInput, currencyOutput,
+                hotelList,
+                showAddEventModal, showAddExpenseModal, showAddShoppingModal,
+                newEvent, isEditing,
+                // Methods
+                getDayOfWeek, getDayDate,
+                getCategoryColor, getCategoryHex, getCategoryName, getExpenseIcon,
+                openGoogleMaps,
+                dragStart, drop,
+                editEvent, closeEventModal, saveEvent, confirmDeleteEvent,
+                addExpense, calculateRate
+            }
+        }
+    }).mount('#app');
+</script>
+
+</body>
+</html>
