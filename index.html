@@ -34,8 +34,8 @@
                         sans: ['"Zen Maru Gothic"', 'sans-serif'],
                     },
                     boxShadow: {
-                        'floating': '0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-                        'card': '0 4px 20px rgba(255, 183, 197, 0.15)',
+                        'floating': '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                        'card': '0 4px 15px rgba(255, 183, 197, 0.2)',
                     }
                 }
             }
@@ -47,15 +47,14 @@
             background-color: #f5f5f0;
             color: #4a4a4a;
             -webkit-font-smoothing: antialiased;
-            padding-bottom: 100px; /* 為了浮動導覽列預留空間 */
+            padding-bottom: 100px; /* 為浮動導覽列預留空間 */
         }
         
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
         .active-press:active { transform: scale(0.97); transition: transform 0.1s; }
-
-        /* 檔案上傳 Input 隱藏 */
+        
         input[type="file"] { display: none; }
     </style>
 </head>
@@ -67,7 +66,6 @@
         <div class="h-[250px] w-full overflow-hidden relative">
             <img :src="headerImage" @error="headerImage='https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=1920&auto=format&fit=crop'" class="w-full h-full object-cover" alt="Header">
             <div class="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-black/60 to-transparent"></div>
-            
             <div class="absolute top-6 right-4 text-right text-white drop-shadow-lg z-10">
                 <h1 class="text-2xl font-black tracking-wider mb-1">2026 日本F1櫻花自由行</h1>
                 <div class="inline-block bg-white/20 backdrop-blur-md px-3 py-1 rounded-full border border-white/30">
@@ -273,7 +271,7 @@
 
             <div class="bg-white rounded-3xl p-5 shadow-card">
                 <h3 class="font-bold text-gray-800 mb-4 flex items-center"><i class="fa-solid fa-plane-departure mr-2 text-blue-500"></i>航班資訊</h3>
-                 <div class="mb-6 relative">
+                <div class="mb-6 relative">
                     <div class="absolute left-[19px] top-8 bottom-0 w-0.5 bg-gray-100"></div>
                     <div class="flex items-start mb-4">
                         <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center flex-shrink-0 z-10 border-4 border-white shadow-sm"><i class="fa-solid fa-plane-up"></i></div>
@@ -311,6 +309,18 @@
                     </li>
                 </ul>
             </div>
+            
+             <div class="bg-white rounded-3xl p-5 shadow-card border-t-4 border-red-400">
+                <h3 class="font-bold text-red-500 mb-4 flex items-center"><i class="fa-solid fa-triangle-exclamation mr-2"></i>緊急聯絡</h3>
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <a href="tel:110" class="bg-red-50 py-3 rounded-2xl text-red-600 font-bold block hover:bg-red-100 transition">
+                        <i class="fa-solid fa-user-shield block text-2xl mb-2 opacity-50"></i> 警察 110
+                    </a>
+                    <a href="tel:119" class="bg-red-50 py-3 rounded-2xl text-red-600 font-bold block hover:bg-red-100 transition">
+                        <i class="fa-solid fa-truck-medical block text-2xl mb-2 opacity-50"></i> 救護 119
+                    </a>
+                </div>
+            </div>
         </div>
 
     </main>
@@ -337,6 +347,7 @@
             <h3 class="text-xl font-bold mb-6 text-center text-gray-800">{{ isEditing ? '編輯行程' : '新增行程' }}</h3>
             
             <div class="space-y-4 max-h-[60vh] overflow-y-auto px-1">
+                
                 <div class="flex justify-center mb-2">
                     <div class="relative w-full h-40 bg-gray-100 rounded-2xl overflow-hidden cursor-pointer border-2 border-dashed border-gray-300 hover:border-sakura transition"
                          @click="$refs.eventImageInput.click()">
@@ -452,6 +463,7 @@
             const currencyInput = ref(0);
             const exchangeRate = 0.22; 
 
+            // Tabs (移除 Map)
             const tabs = [
                 { id: 'itinerary', name: '行程', icon: 'fa-solid fa-calendar-check' },
                 { id: 'expenses', name: '花費', icon: 'fa-solid fa-wallet' },
@@ -467,38 +479,37 @@
                 { id: 'transport', name: '交通', color: '#87CEEB' },
                 { id: 'flight', name: '航班', color: '#4169E1' }
             ];
-
-            // 預設圖片 (為了展示效果，先放一些 Unsplash 的圖)
+            
+            // 預設圖片
             const defaultImages = {
                 akihabara: 'https://images.unsplash.com/photo-1579706894080-6060c410b056?w=200&q=80',
                 tsukiji: 'https://images.unsplash.com/photo-1549692520-acc6669e2f0c?w=200&q=80',
                 disney: 'https://images.unsplash.com/photo-1545580005-950c6096e21b?w=200&q=80',
-                nagoya: 'https://images.unsplash.com/photo-1624686417724-469b828811d7?w=200&q=80',
                 f1: 'https://images.unsplash.com/photo-1574768565026-c22867562f74?w=200&q=80'
             };
 
             const itineraryDays = ref([
                 { date: '2026-03-21', location: '東京/秋葉原', prevHotel:null, events: [
-                    { id: 1, category: 'flight', name: '去程航班 JL802', depCode:'TPE', arrCode:'NRT', startTime:'10:55', endTime:'14:55', duration:'3h00m', flightNo:'JL802', tags:[], transportType:'train', travelTime:'約 1hr', image: null },
+                    { id: 1, category: 'flight', name: '去程航班 JL802', depCode:'TPE', arrCode:'NRT', startTime:'10:55', endTime:'14:55', duration:'3h00m', flightNo:'JL802', tags:[], transportType:'train', travelTime:'約 1hr', image:null },
                     { id: 2, category: 'hotel', name: '秋葉原 Check-in', time:'16:00', note:'先放行李', tags:[], transportType:'walk', travelTime:'10 min', image: defaultImages.akihabara },
-                    { id: 3, category: 'food', name: '秋葉原晚餐', note:'附近美食', tags:['必吃'], transportType:'walk', travelTime:'5 min', image: null },
-                    { id: 4, category: 'shopping', name: '秋葉原動漫挖寶', note:'Radio Kaikan, Animate', tags:['必買'], transportType:'walk', travelTime:'5 min', image: null },
-                    { id: 5, category: 'hotel', name: '秋葉原雷姆飯店', note:'住宿', tags:[], transportType:'', travelTime:'', image: null }
+                    { id: 3, category: 'food', name: '秋葉原晚餐', note:'附近美食', tags:['必吃'], transportType:'walk', travelTime:'5 min', image:null },
+                    { id: 4, category: 'shopping', name: '秋葉原動漫挖寶', note:'Radio Kaikan, Animate', tags:['必買'], transportType:'walk', travelTime:'5 min', image:null },
+                    { id: 5, category: 'hotel', name: '秋葉原雷姆飯店', note:'住宿', tags:[], transportType:'', travelTime:'', image:null }
                 ]},
                 { date: '2026-03-22', location: '東京', prevHotel:'秋葉原雷姆飯店', events: [
                     { id: 10, category: 'food', name: '築地市場', time:'09:00', note:'吃海鮮', tags:['必吃'], transportType:'train', travelTime:'30 min', image: defaultImages.tsukiji },
-                    { id: 11, category: 'spot', name: '初音演唱會', time:'11:00', note:'LaLa arena TOKYO-BAY', ticket:'已購票', tags:['必拍'], transportType:'train', travelTime:'50 min', image: null },
-                    { id: 13, category: 'spot', name: '錦糸公園', time:'16:30', note:'櫻花+晴空塔', tags:['必拍'], transportType:'train', travelTime:'20 min', image: null },
-                    { id: 16, category: 'hotel', name: '秋葉原雷姆飯店', note:'', tags:[], transportType:'', travelTime:'', image: null }
+                    { id: 11, category: 'spot', name: '初音演唱會', time:'11:00', note:'LaLa arena TOKYO-BAY', ticket:'已購票', tags:['必拍'], transportType:'train', travelTime:'50 min', image:null },
+                    { id: 12, category: 'food', name: 'LaLaPort 用餐逛街', time:'15:00', note:'', tags:[], transportType:'train', travelTime:'10 min', image:null },
+                    { id: 13, category: 'spot', name: '錦糸公園', time:'16:30', note:'櫻花+晴空塔', tags:['必拍'], transportType:'train', travelTime:'20 min', image:null },
+                    { id: 16, category: 'hotel', name: '秋葉原雷姆飯店', note:'', tags:[], transportType:'', travelTime:'', image:null }
                 ]},
                 { date: '2026-03-23', location: '舞濱', prevHotel:'秋葉原雷姆飯店', events: [
                     { id: 22, category: 'spot', name: 'Disney Land', time:'14:00', note:'簡單玩, 看煙火', tags:['必拍'], transportType:'walk', travelTime:'10 min', image: defaultImages.disney },
-                    { id: 23, category: 'hotel', name: '迪士尼海洋夢幻泉鄉大飯店', note:'夢幻館', tags:[], transportType:'walk', travelTime:'15 min', image: null }
+                    { id: 23, category: 'hotel', name: '迪士尼海洋夢幻泉鄉大飯店', note:'夢幻館', tags:[], transportType:'walk', travelTime:'15 min', image:null }
                 ]},
-                // ... (其餘行程依此類推，為節省長度不全部展開，實際使用會包含全部)
                 { date: '2026-03-26', location: '名古屋/鈴鹿', prevHotel:'名古屋三井花園飯店', events: [
                     { id: 51, category: 'spot', name: 'F1 鈴鹿賽道', time:'13:00', note:'下午前往', tags:['必看'], transportType:'train', travelTime:'1 hr', image: defaultImages.f1 },
-                    { id: 52, category: 'hotel', name: '名古屋三井花園飯店', note:'含早餐', tags:[], transportType:'train', travelTime:'1 hr', image: null }
+                    { id: 52, category: 'hotel', name: '名古屋三井花園飯店', note:'含早餐', tags:[], transportType:'train', travelTime:'1 hr', image:null }
                 ]},
             ]);
 
@@ -545,7 +556,7 @@
             };
             const openGoogleMaps = (name) => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`, '_blank');
 
-            // 行程圖片上傳
+            // 處理行程圖片上傳
             const handleEventImageUpload = (event) => {
                 const file = event.target.files[0];
                 if (file) {
@@ -555,7 +566,7 @@
                 }
             };
 
-            // 行程 Drag & Drop
+            // Drag and Drop
             let draggedItemIndex = null;
             const dragStart = (index) => draggedItemIndex = index;
             const drop = (index) => {
@@ -611,9 +622,9 @@
                     newExpense.value = { category: 'food', name: '', amount: null, method: 'cash' };
                 }
             };
-            // 新增刪除花費功能
+            // 刪除花費
             const deleteExpense = (id) => {
-                if(confirm('確定要刪除這筆花費記錄嗎？')) {
+                if(confirm('確定刪除這筆花費？')) {
                     expenses.value = expenses.value.filter(e => e.id !== id);
                 }
             };
