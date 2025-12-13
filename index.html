@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>森之旅 | 旅遊手帳 App</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'paper': '#F7F4EB',       // 米色背景
+                        'paper-dark': '#EBE5D5',
+                        'nook-green': '#6ABF69',  // 動森綠
+                        'nook-teal': '#38A3A5',
+                        'warm-pink': '#FF8B94',   // 暖粉
+                        'wood': '#8D6E63',        // 木頭色
+                        'pencil': '#57534E',      // 深灰字體
+                    },
+                    fontFamily: {
+                        sans: ['"M PLUS Rounded 1c"', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'pop': '4px 4px 0px 0px #8D6E63', // 硬陰影風格
+                        'pop-sm': '2px 2px 0px 0px #8D6E63',
+                        'inner-soft': 'inset 2px 2px 5px rgba(0,0,0,0.05)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 全局樣式調整 */
+        body {
+            background-color: #E0E5EC; /* 桌面背景 */
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            color: #57534E;
+        }
+        
+        /* 隱藏捲軸但保留功能 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* 模擬 App 容器 */
+        #app-container {
+            background-image: radial-gradient(#EBE5D5 15%, transparent 16%), radial-gradient(#EBE5D5 15%, transparent 16%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            background-color: #F7F4EB;
+        }
+
+        /* 登機證切角效果 */
+        .ticket-cutout {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background-color: #F7F4EB;
+            border-radius: 50%;
+            top: 50%;
+            transform: translateY(-50%);
+            box-shadow: inset 2px 0px 0px 0px #8D6E63; /* 模擬內部陰影接縫 */
+        }
+        .ticket-cutout-l { left: -12px; box-shadow: inset -2px 0px 0px 0px #EBE5D5; }
+        .ticket-cutout-r { right: -12px; box-shadow: inset 2px 0px 0px 0px #EBE5D5; }
+    </style>
+</head>
+<body class="flex justify-center items-center min-h-screen">
+
+    <div id="app" class="w-full h-screen sm:h-[850px] sm:w-[420px] sm:rounded-[40px] sm:border-8 sm:border-white sm:shadow-2xl overflow-hidden relative flex flex-col">
+        
+        <div id="app-container" class="flex-1 overflow-y-auto no-scrollbar pb-24 relative">
+            
+            <header class="sticky top-0 z-20 bg-[#F7F4EB]/95 backdrop-blur-sm px-6 pt-12 pb-4 border-b-2 border-dashed border-[#EBE5D5]">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-2xl font-bold text-wood tracking-wide">
+                            <i class="fa-solid fa-plane-departure mr-2"></i>京都之旅
+                        </h1>
+                        <p class="text-xs text-stone-500 font-bold mt-1">
+                            <span class="bg-nook-green text-white px-2 py-0.5 rounded-full mr-1">還有 {{ daysUntil }} 天</span> 2026/03/21 出發
+                        </p>
+                    </div>
+                    <div class="w-10 h-10 bg-warm-pink rounded-full border-2 border-white shadow-pop-sm flex items-center justify-center overflow-hidden">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User">
+                    </div>
+                </div>
+            </header>
+
+            <main v-if="activeTab === 'schedule'" class="px-5 pt-6 animate-fade-in">
+                
+                <div class="bg-blue-100 rounded-3xl p-4 mb-6 border-2 border-white shadow-pop flex items-center justify-between">
+                    <div>
+                        <div class="text-sm text-blue-500 font-bold mb-1">預測天氣</div>
+                        <div class="text-3xl font-black text-blue-600">18°C</div>
+                        <div class="text-xs text-blue-400">晴時多雲 · 降雨機率 10%</div>
+                    </div>
+                    <div class="text-5xl text-yellow-400 drop-shadow-md">🌤️</div>
+                </div>
+
+                <div class="flex space-x-3 overflow-x-auto no-scrollbar mb-6 pb-2">
+                    <button v-for="(day, index) in itineraryDays" :key="index"
+                        @click="currentDayIndex = index"
+                        class="flex-shrink-0 w-16 h-20 rounded-2xl flex flex-col items-center justify-center border-2 transition-all duration-200"
+                        :class="currentDayIndex === index ? 'bg-wood border-wood text-white shadow-pop-sm transform translate-y-1' : 'bg-white border-stone-200 text-stone-400'">
+                        <span class="text-xs font-bold">Day {{ index + 1 }}</span>
+                        <span class="text-lg font-black">{{ day.date }}</span>
+                    </button>
+                </div>
+
+                <div class="space-y-4 relative">
+                    <div class="absolute left-4 top-4 bottom-4 w-1 bg-stone-200 rounded-full"></div>
+
+                    <div v-for="(item, idx) in currentItinerary" :key="idx" class="relative pl-10 group">
+                        <div class="absolute left-2 top-3 w-5 h-5 rounded-full border-4 border-[#F7F4EB] z-10"
+                             :class="getCategoryColor(item.type)"></div>
+                        
+                        <div class="bg-white rounded-2xl p-4 border-2 border-stone-100 shadow-pop-sm active:scale-95 transition-transform cursor-pointer" @click="openModal(item)">
+                            <div class="flex justify-between items-start mb-2">
+                                <span class="text-xs font-bold px-2 py-1 rounded-lg bg-gray-100 text-gray-500">{{ item.time }}</span>
+                                <span class="text-xs text-stone-300"><i class="fa-solid fa-chevron-right"></i></span>
+                            </div>
+                            <h3 class="font-bold text-lg text-stone-700 mb-1">{{ item.title }}</h3>
+                            <p class="text-xs text-stone-400 flex items-center gap-1">
+                                <i class="fa-solid fa-location-dot"></i> {{ item.location }}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-center mt-6">
+                        <button class="bg-stone-200 text-stone-400 rounded-full w-10 h-10 flex items-center justify-center border-2 border-dashed border-stone-300">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </main>
+
+            <main v-if="activeTab === 'booking'" class="px-5 pt-6">
+                <h2 class="text-xl font-bold text-wood mb-4 pl-2 border-l-4 border-warm-pink">我的票券</h2>
+                
+                <div class="bg-white rounded-3xl p-0 mb-6 border-2 border-stone-200 shadow-pop overflow-hidden relative">
+                    <div class="bg-nook-teal p-4 flex justify-between items-center text-white">
+                        <div class="font-bold tracking-widest">JAL 日本航空</div>
+                        <i class="fa-solid fa-plane"></i>
+                    </div>
+                    <div class="p-5">
+                        <div class="flex justify-between items-center mb-4">
+                            <div class="text-center">
+                                <div class="text-3xl font-black text-stone-700">TPE</div>
+                                <div class="text-xs text-stone-400">台北桃園</div>
+                            </div>
+                            <div class="text-stone-300 text-sm">----- ✈ -----</div>
+                            <div class="text-center">
+                                <div class="text-3xl font-black text-stone-700">KIX</div>
+                                <div class="text-xs text-stone-400">大阪關西</div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <div class="text-xs text-stone-400">日期</div>
+                                <div class="font-bold text-stone-600">03/21</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-stone-400">登機時間</div>
+                                <div class="font-bold text-stone-600">08:30 AM</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ticket-cutout ticket-cutout-l top-[65%]"></div>
+                    <div class="ticket-cutout ticket-cutout-r top-[65%]"></div>
+                    <div class="border-t-2 border-dashed border-stone-200 mx-4 mt-2 mb-4"></div>
+                     <div class="px-5 pb-5 flex justify-between items-center">
+                        <div class="font-mono text-stone-400 text-xs">NO. 8839201</div>
+                        <button class="text-xs bg-stone-100 text-stone-500 px-3 py-1 rounded-full font-bold">查看 PDF</button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl p-4 mb-4 border-2 border-stone-200 shadow-pop flex gap-4">
+                    <div class="w-20 h-20 bg-stone-200 rounded-xl overflow-hidden flex-shrink-0">
+                        <img src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-bold text-stone-700">京都千柱飯店</h3>
+                        <p class="text-xs text-stone-400 mb-2">Check-in: 15:00</p>
+                        <div class="flex justify-between items-end">
+                            <span class="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded">已付款</span>
+                            <button class="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-400">
+                                <i class="fa-solid fa-location-arrow"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <main v-if="activeTab === 'expense'" class="px-5 pt-6">
+                <div class="bg-wood rounded-3xl p-6 text-white shadow-pop mb-6 relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-white opacity-10 rounded-full"></div>
+                    <div class="text-sm opacity-80 mb-1">總支出 (TWD)</div>
+                    <div class="text-4xl font-black mb-4">$ 28,450</div>
+                    <div class="flex gap-2">
+                        <div class="flex-1 bg-white/20 rounded-xl p-2 backdrop-blur-sm">
+                            <div class="text-xs opacity-70">日幣 JPY</div>
+                            <div class="font-bold">¥ 128,000</div>
+                        </div>
+                        <div class="flex-1 bg-white/20 rounded-xl p-2 backdrop-blur-sm">
+                            <div class="text-xs opacity-70">預算剩餘</div>
+                            <div class="font-bold">$ 11,550</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-t-3xl border-t-2 border-x-2 border-stone-200 p-5 min-h-[300px]">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-stone-700">今日支出</h3>
+                        <button class="text-xs bg-stone-100 px-2 py-1 rounded-lg">轉換匯率</button>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div v-for="(exp, i) in expenses" :key="i" class="flex items-center justify-between py-2 border-b border-dashed border-stone-100 last:border-0">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-xl">
+                                    {{ exp.icon }}
+                                </div>
+                                <div>
+                                    <div class="font-bold text-stone-700 text-sm">{{ exp.item }}</div>
+                                    <div class="text-xs text-stone-400">{{ exp.category }}</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-stone-700">¥{{ exp.amount }}</div>
+                                <div class="text-xs text-stone-400">~NT$ {{ Math.round(exp.amount * 0.22) }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+            
+            <div class="h-24"></div>
+        </div>
+
+        <button v-if="activeTab === 'expense'" 
+            class="absolute bottom-24 right-6 w-14 h-14 bg-warm-pink text-white rounded-full shadow-pop flex items-center justify-center text-2xl z-30 active:scale-90 transition-transform">
+            <i class="fa-solid fa-plus"></i>
+        </button>
+
+        <nav class="absolute bottom-0 w-full bg-white border-t-2 border-stone-100 px-6 py-4 flex justify-between items-center z-40 pb-8 sm:pb-4">
+            <button @click="activeTab = 'schedule'" class="flex flex-col items-center gap-1 w-16 group">
+                <div class="text-2xl transition-colors duration-200" :class="activeTab === 'schedule' ? 'text-nook-green' : 'text-stone-300'">
+                    <i class="fa-solid fa-calendar-day"></i>
+                </div>
+                <span class="text-[10px] font-bold" :class="activeTab === 'schedule' ? 'text-stone-600' : 'text-stone-300'">行程</span>
+            </button>
+            
+            <button @click="activeTab = 'booking'" class="flex flex-col items-center gap-1 w-16 group">
+                <div class="text-2xl transition-colors duration-200" :class="activeTab === 'booking' ? 'text-nook-teal' : 'text-stone-300'">
+                    <i class="fa-solid fa-ticket"></i>
+                </div>
+                <span class="text-[10px] font-bold" :class="activeTab === 'booking' ? 'text-stone-600' : 'text-stone-300'">預訂</span>
+            </button>
+            
+            <button @click="activeTab = 'expense'" class="flex flex-col items-center gap-1 w-16 group">
+                <div class="text-2xl transition-colors duration-200" :class="activeTab === 'expense' ? 'text-warm-pink' : 'text-stone-300'">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <span class="text-[10px] font-bold" :class="activeTab === 'expense' ? 'text-stone-600' : 'text-stone-300'">記帳</span>
+            </button>
+        </nav>
+
+        <div v-if="showModal" class="absolute inset-0 z-50 flex items-end sm:items-center justify-center bg-stone-800/40 backdrop-blur-sm animate-fade-in" @click.self="closeModal">
+            <div class="bg-white w-full sm:w-[90%] h-[80%] sm:h-auto sm:rounded-3xl rounded-t-3xl p-6 relative shadow-2xl transform transition-transform duration-300 slide-up">
+                <button @click="closeModal" class="absolute top-4 right-4 text-stone-400 text-xl"><i class="fa-solid fa-xmark"></i></button>
+                
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="w-10 h-10 rounded-full flex items-center justify-center text-white" :class="getCategoryColor(selectedItem.type)">
+                        <i :class="getCategoryIcon(selectedItem.type)"></i>
+                    </span>
+                    <h2 class="text-2xl font-bold text-stone-700">{{ selectedItem.title }}</h2>
+                </div>
+
+                <div class="space-y-4 overflow-y-auto max-h-[60vh] pb-10">
+                    <div class="bg-stone-50 rounded-xl p-4 border border-stone-100">
+                        <div class="flex items-start gap-3 mb-3">
+                            <i class="fa-solid fa-clock text-stone-400 mt-1"></i>
+                            <div>
+                                <div class="text-xs text-stone-400">時間</div>
+                                <div class="font-bold text-stone-600">{{ selectedItem.time }}</div>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <i class="fa-solid fa-location-dot text-stone-400 mt-1"></i>
+                            <div>
+                                <div class="text-xs text-stone-400">地點</div>
+                                <div class="font-bold text-stone-600 underline decoration-dashed decoration-stone-300 cursor-pointer">
+                                    {{ selectedItem.location }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="w-full h-40 bg-stone-200 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer">
+                        <img src="https://maps.googleapis.com/maps/api/staticmap?center=Kyoto&zoom=12&size=400x200&sensor=false&key=YOUR_API_KEY_HERE_OR_MOCK" 
+                             class="w-full h-full object-cover opacity-60 grayscale group-hover:grayscale-0 transition-all"
+                             onerror="this.style.display='none'">
+                        <div class="absolute inset-0 flex flex-col items-center justify-center bg-stone-800/10">
+                            <button class="bg-white text-stone-700 px-4 py-2 rounded-full shadow-pop text-sm font-bold flex items-center gap-2">
+                                <i class="fa-solid fa-map-location-dot"></i> 開啟導航
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="font-bold text-stone-600 mb-2">筆記</h4>
+                        <textarea class="w-full bg-[#F7F4EB] border-2 border-stone-200 rounded-xl p-3 text-sm focus:outline-none focus:border-wood" rows="4" placeholder="寫點什麼..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        createApp({
+            setup() {
+                const activeTab = ref('schedule');
+                const showModal = ref(false);
+                const selectedItem = ref({});
+                const currentDayIndex = ref(0);
+                
+                // 倒數計時
+                const daysUntil = ref(102); 
+
+                // 模擬數據：天數
+                const itineraryDays = ref([
+                    { date: '3/21', full: '2026-03-21' },
+                    { date: '3/22', full: '2026-03-22' },
+                    { date: '3/23', full: '2026-03-23' },
+                    { date: '3/24', full: '2026-03-24' },
+                    { date: '3/25', full: '2026-03-25' },
+                ]);
+
+                // 模擬數據：行程
+                const itineraryData = {
+                    0: [
+                        { id: 1, time: '14:00', title: '抵達關西機場', location: 'KIX T1', type: 'transport' },
+                        { id: 2, time: '16:00', title: 'Check-in 飯店', location: '京都千柱飯店', type: 'stay' },
+                        { id: 3, time: '18:30', title: '鴨川散步晚餐', location: 'Pontocho Alley', type: 'food' },
+                    ],
+                    1: [
+                        { id: 4, time: '09:00', title: '清水寺參拜', location: 'Kiyomizu-dera', type: 'spot' },
+                        { id: 5, time: '12:00', title: '豆腐料理午餐', location: 'Okutan Kiyomizu', type: 'food' },
+                        { id: 6, time: '14:30', title: '二年坂・三年坂', location: 'Higashiyama Ward', type: 'spot' },
+                        { id: 7, time: '17:00', title: 'F1 轉播觀看派對', location: 'HUB Pub Kyoto', type: 'fun' },
+                    ]
+                };
+
+                // 模擬數據：記帳
+                const expenses = ref([
+                    { item: '便利商店', category: '飲食', amount: 850, icon: '🍙' },
+                    { item: '地鐵一日券', category: '交通', amount: 1200, icon: '🚇' },
+                    { item: '抹茶拿鐵', category: '飲食', amount: 650, icon: '🍵' },
+                ]);
+
+                // 計算當前顯示的行程
+                const currentItinerary = computed(() => {
+                    return itineraryData[currentDayIndex.value] || [];
+                });
+
+                // 輔助函式
+                const getCategoryColor = (type) => {
+                    const map = {
+                        'spot': 'bg-nook-green',
+                        'food': 'bg-warm-pink',
+                        'transport': 'bg-nook-teal',
+                        'stay': 'bg-wood',
+                        'fun': 'bg-purple-400'
+                    };
+                    return map[type] || 'bg-gray-400';
+                };
+
+                const getCategoryIcon = (type) => {
+                    const map = {
+                        'spot': 'fa-solid fa-camera',
+                        'food': 'fa-solid fa-utensils',
+                        'transport': 'fa-solid fa-train',
+                        'stay': 'fa-solid fa-bed',
+                        'fun': 'fa-solid fa-flag-checkered'
+                    };
+                    return map[type] || 'fa-solid fa-circle';
+                }
+
+                const openModal = (item) => {
+                    selectedItem.value = item;
+                    showModal.value = true;
+                };
+
+                const closeModal = () => {
+                    showModal.value = false;
+                };
+
+                return {
+                    activeTab,
+                    itineraryDays,
+                    currentDayIndex,
+                    currentItinerary,
+                    getCategoryColor,
+                    getCategoryIcon,
+                    showModal,
+                    selectedItem,
+                    openModal,
+                    closeModal,
+                    daysUntil,
+                    expenses
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
