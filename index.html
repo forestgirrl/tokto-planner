@@ -188,7 +188,7 @@
                  @click="openBookingModal(hotel, 'hotel')">
                 
                 <div class="h-40 bg-gray-200 relative cursor-pointer" @click.stop="triggerPhotoUpload('hotel-'+hotel.id)">
-                    <img :src="hotel.img || 'https://placehold.co/600x400/E0E5D5/5A544B?text=Tap+to+Add+Photo'" class="w-full h-full object-cover transition-opacity hover:opacity-90">
+                    <img :src="hotel.img" class="w-full h-full object-cover transition-opacity hover:opacity-90" @error="handleImgError">
                     <input type="file" :id="'file-hotel-'+hotel.id" class="hidden" accept="image/*" @change="(e) => handleBookingPhoto(e, hotel)">
                     <div class="absolute bottom-2 left-2 bg-white/90 px-2 py-1 rounded-lg text-xs font-bold text-primary shadow-sm flex items-center gap-1">
                         <i class="fa-solid fa-moon"></i> {{ hotel.nights }} 晚
@@ -443,7 +443,8 @@
             const showTodoModal = ref(false);
 
             const bookingType = ref('hotel');
-            const headerImage = ref('https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&q=80&w=1000'); // F1 Theme substitute
+            // 修改點: 使用 images 資料夾圖片
+            const headerImage = ref('images/f1cat.jpg'); 
             
             const weatherData = ref({ temp: '--', icon: 'fa-solid fa-spinner fa-spin', desc: 'Loading...' });
 
@@ -471,7 +472,7 @@
                 ]
             });
 
-            // --- Bookings Data (Pre-filled with 4 Hotels, Dates Updated) ---
+            // --- Bookings Data (Updated Images) ---
             const bookings = ref({
                 flights: [
                     { id: 1, from: 'TPE', to: 'NRT', code: 'BR198', date: '01/03', depTime: '08:50', arrTime: '12:55' },
@@ -485,7 +486,7 @@
                         checkIn: '01/03', 
                         checkOut: '01/05', 
                         nights: 2, 
-                        img: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=800' 
+                        img: 'images/hotel01.jpg' // 修改點: 使用本地圖片
                     },
                     { 
                         id: 2, 
@@ -494,7 +495,7 @@
                         checkIn: '01/05', 
                         checkOut: '01/07', 
                         nights: 2, 
-                        img: 'https://images.unsplash.com/photo-1628151016056-b040924040a4?auto=format&fit=crop&q=80&w=800' 
+                        img: 'images/hotel02.jpg' // 修改點: 使用本地圖片
                     },
                     { 
                         id: 3, 
@@ -503,7 +504,7 @@
                         checkIn: '01/07', 
                         checkOut: '01/09', 
                         nights: 2, 
-                        img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800' 
+                        img: 'images/hotel03.jpg' // 修改點: 使用本地圖片
                     },
                     { 
                         id: 4, 
@@ -512,7 +513,7 @@
                         checkIn: '01/09', 
                         checkOut: '01/11', 
                         nights: 2, 
-                        img: 'https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&q=80&w=800' 
+                        img: 'images/hotel04.jpg' // 修改點: 使用本地圖片
                     }
                 ]
             });
@@ -825,7 +826,10 @@
             const getCategoryIcon = (cat) => ({ transport:'🚆', food:'🍱', shop:'🛍️', ticket:'🎫' }[cat] || '💰');
             const getTransportIcon = (type) => (type === 'walk' ? 'fa-solid fa-person-walking' : 'fa-solid fa-train-subway');
             const openMap = (loc) => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank');
-            const handleImgError = (e) => e.target.src = "https://placehold.co/1920x400/E6C683/FFFFFF?text=F1+Theme+Header";
+            const handleImgError = (e) => {
+                // 如果找不到圖片，改為顯示灰色區塊並提示
+                e.target.src = "https://placehold.co/600x400/E0E5D5/5A544B?text=Image+Not+Found";
+            };
 
             onMounted(() => fetchWeather());
 
