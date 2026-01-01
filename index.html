@@ -106,10 +106,11 @@
                 <div class="absolute left-[26px] top-2 bottom-0 w-0.5 border-l-2 border-dashed border-gray-300 z-0"></div>
 
                 <div v-for="(event, index) in currentDayEvents" :key="event.id" class="relative pl-0 group mb-6">
+                    
                     <div v-if="index > 0" class="absolute -top-5 left-12 flex items-center z-0 pointer-events-none">
                          <div class="bg-white/90 px-2 py-0.5 rounded-full text-[10px] text-gray-500 border border-gray-200 flex items-center gap-1">
                             <i :class="getTransportIcon(event.transportType)"></i>
-                            <span>{{ getTransportTime(index) }}</span>
+                            <span>{{ event.transportTime || '15 min' }}</span>
                          </div>
                     </div>
 
@@ -126,20 +127,20 @@
                             </div>
                         </div>
 
-                        <div :class="['bg-white h-full rounded-2xl p-3 border-2 border-transparent shadow-soft relative z-10 flex gap-3 overflow-hidden no-select', isSwiping ? 'swipe-item' : 'swipe-reset']"
+                        <div :class="['bg-white h-full rounded-2xl p-3 border-2 border-transparent shadow-soft relative z-10 flex gap-3 overflow-hidden no-select active:border-primary/20 cursor-pointer', isSwiping ? 'swipe-item' : 'swipe-reset']"
                              :style="{ transform: `translateX(${event.offsetX || 0}px)` }"
                              @touchstart="touchStart($event, event)"
                              @touchmove="touchMove($event, event)"
                              @touchend="touchEnd($event, event)"
-                             @click="resetSwipes(event)">
-                            
-                            <div class="flex-1 flex flex-col justify-between" @click.stop="openMap(event.location)">
+                             @click="handleEventClick(event)"> <div class="flex-1 flex flex-col justify-between">
                                 <div>
                                     <div v-if="event.category === 'flight'" class="text-[10px] text-blue-500 font-bold mb-1"><i class="fa-solid fa-plane-departure"></i> 航班</div>
                                     <h3 class="font-bold text-lg leading-tight text-text line-clamp-2">{{ event.title }}</h3>
-                                    <div class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                                    
+                                    <div class="text-xs text-gray-400 mt-1 flex items-center gap-1 cursor-pointer hover:text-blue-500 transition-colors"
+                                         @click.stop="openMap(event.location)">
                                         <i class="fa-solid fa-location-dot text-primary text-[10px]"></i> 
-                                        <span class="line-clamp-1">{{ event.location }}</span>
+                                        <span class="line-clamp-1 underline decoration-dashed">{{ event.location }}</span>
                                     </div>
                                 </div>
                                 <div class="flex flex-wrap gap-1 mt-2">
@@ -163,7 +164,7 @@
                     </div>
                 </div>
 
-                <button @click="showAddModal = true" class="fixed bottom-24 right-6 w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:scale-110 active:scale-90 transition-transform z-30">
+                <button @click="openEventModal()" class="fixed bottom-24 right-6 w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:scale-110 active:scale-90 transition-transform z-30">
                     <i class="fa-solid fa-plus"></i>
                 </button>
             </div>
@@ -179,27 +180,17 @@
             
             <div v-for="(hotel, idx) in bookings.hotels" :key="'h'+hotel.id" class="bg-white rounded-2xl overflow-hidden shadow-soft relative group">
                 <button @click="deleteBooking('hotels', idx)" class="absolute top-2 right-2 bg-white/80 p-2 rounded-full w-8 h-8 flex items-center justify-center text-red-500 z-10 shadow-sm"><i class="fa-solid fa-trash-can text-sm"></i></button>
-
                 <div class="h-36 bg-gray-200 relative cursor-pointer" @click="triggerPhotoUpload('hotel-'+hotel.id)">
                     <img :src="hotel.img || 'https://placehold.co/600x400/E0E5D5/5A544B?text=Tap+to+Add+Photo'" class="w-full h-full object-cover">
                     <input type="file" :id="'file-hotel-'+hotel.id" class="hidden" accept="image/*" @change="(e) => handleBookingPhoto(e, hotel)">
                     <div class="absolute bottom-2 left-2 bg-white/90 px-2 py-1 rounded-lg text-xs font-bold text-primary shadow-sm">{{ hotel.nights }} 晚</div>
                 </div>
-
                 <div class="p-4">
                     <h3 class="font-bold text-lg mb-1">{{ hotel.name }}</h3>
-                    <p class="text-xs text-blue-500 mb-3 cursor-pointer underline" @click="openMap(hotel.address)">
-                        <i class="fa-solid fa-map-location-dot mr-1"></i>{{ hotel.address }}
-                    </p>
+                    <p class="text-xs text-blue-500 mb-3 cursor-pointer underline" @click="openMap(hotel.address)"><i class="fa-solid fa-map-location-dot mr-1"></i>{{ hotel.address }}</p>
                     <div class="flex justify-between text-xs bg-bg p-2 rounded-xl">
-                        <div class="text-center w-1/2">
-                            <div class="text-gray-400 scale-90">Check-in</div>
-                            <div class="font-bold">{{ hotel.checkIn }}</div>
-                        </div>
-                        <div class="text-center w-1/2 border-l border-gray-300">
-                            <div class="text-gray-400 scale-90">Check-out</div>
-                            <div class="font-bold">{{ hotel.checkOut }}</div>
-                        </div>
+                        <div class="text-center w-1/2"><div class="text-gray-400 scale-90">Check-in</div><div class="font-bold">{{ hotel.checkIn }}</div></div>
+                        <div class="text-center w-1/2 border-l border-gray-300"><div class="text-gray-400 scale-90">Check-out</div><div class="font-bold">{{ hotel.checkOut }}</div></div>
                     </div>
                 </div>
             </div>
@@ -209,27 +200,13 @@
                  <div class="bg-primary h-3 w-full"></div>
                  <div class="p-5">
                      <div class="flex justify-between items-center mb-4">
-                         <div class="text-center">
-                             <div class="text-3xl font-black text-text">{{ flight.from }}</div>
-                             <div class="text-sm font-bold text-primary mt-1">{{ flight.depTime }}</div>
-                         </div>
-                         <div class="flex-1 mx-4 border-b-2 border-dashed border-gray-300 relative text-center">
-                             <i class="fa-solid fa-plane text-gray-300 absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white px-1"></i>
-                         </div>
-                         <div class="text-center">
-                             <div class="text-3xl font-black text-text">{{ flight.to }}</div>
-                             <div class="text-sm font-bold text-primary mt-1">{{ flight.arrTime }}</div>
-                         </div>
+                         <div class="text-center"><div class="text-3xl font-black text-text">{{ flight.from }}</div><div class="text-sm font-bold text-primary mt-1">{{ flight.depTime }}</div></div>
+                         <div class="flex-1 mx-4 border-b-2 border-dashed border-gray-300 relative text-center"><i class="fa-solid fa-plane text-gray-300 absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white px-1"></i></div>
+                         <div class="text-center"><div class="text-3xl font-black text-text">{{ flight.to }}</div><div class="text-sm font-bold text-primary mt-1">{{ flight.arrTime }}</div></div>
                      </div>
                      <div class="flex justify-between text-sm items-end bg-bg p-2 rounded-lg">
-                         <div>
-                             <p class="text-gray-400 text-xs">FLIGHT</p>
-                             <p class="font-bold">{{ flight.code }}</p>
-                         </div>
-                         <div class="text-right">
-                             <p class="text-gray-400 text-xs">DATE</p>
-                             <p class="font-bold">{{ flight.date }}</p>
-                         </div>
+                         <div><p class="text-gray-400 text-xs">FLIGHT</p><p class="font-bold">{{ flight.code }}</p></div>
+                         <div class="text-right"><p class="text-gray-400 text-xs">DATE</p><p class="font-bold">{{ flight.date }}</p></div>
                      </div>
                  </div>
                  <div class="absolute left-[-10px] top-1/2 w-6 h-6 bg-[#F7F4EB] rounded-full"></div>
@@ -243,39 +220,24 @@
                     <p class="text-sm opacity-70">總支出 (TWD)</p>
                     <h2 class="text-3xl font-bold mt-1">$ {{ totalExpense.toLocaleString() }}</h2>
                     <div class="mt-4 flex gap-4 text-sm">
-                        <div>
-                            <span class="block opacity-50 text-xs">JPY</span>
-                            <span class="font-bold">¥ {{ totalExpenseJpy.toLocaleString() }}</span>
-                        </div>
+                        <div><span class="block opacity-50 text-xs">JPY</span><span class="font-bold">¥ {{ totalExpenseJpy.toLocaleString() }}</span></div>
                     </div>
                 </div>
             </div>
-
             <div class="space-y-4">
                 <div v-for="(item, index) in expenses" :key="item.id" class="relative w-full h-20 group">
-                    
                     <div class="absolute inset-y-0 right-0 w-20 bg-danger rounded-2xl flex items-center justify-center text-white z-0" @click="deleteExpense(index)">
-                        <div class="flex flex-col items-center">
-                            <i class="fa-solid fa-trash-can text-xl mb-1"></i>
-                            <span class="text-[10px] font-bold">刪除</span>
-                        </div>
+                        <div class="flex flex-col items-center"><i class="fa-solid fa-trash-can text-xl mb-1"></i><span class="text-[10px] font-bold">刪除</span></div>
                     </div>
-
                     <div :class="['absolute inset-0 bg-white p-4 rounded-2xl flex justify-between items-center shadow-sm z-10 no-select cursor-pointer border-2 border-transparent active:border-primary/20', isSwiping ? 'swipe-item' : 'swipe-reset']"
                          :style="{ transform: `translateX(${item.offsetX || 0}px)` }"
                          @touchstart="touchStart($event, item)"
                          @touchmove="touchMove($event, item)"
                          @touchend="touchEnd($event, item)"
                          @click="handleExpenseClick(item)">
-                        
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-bg flex items-center justify-center text-lg shrink-0">
-                                {{ getCategoryIcon(item.category) }}
-                            </div>
-                            <div>
-                                <div class="font-bold text-sm">{{ item.title }}</div>
-                                <div class="text-xs text-gray-400">{{ item.date }}</div>
-                            </div>
+                            <div class="w-10 h-10 rounded-full bg-bg flex items-center justify-center text-lg shrink-0">{{ getCategoryIcon(item.category) }}</div>
+                            <div><div class="font-bold text-sm">{{ item.title }}</div><div class="text-xs text-gray-400">{{ item.date }}</div></div>
                         </div>
                         <div class="text-right">
                              <div class="font-bold text-text">¥{{ item.amount }}</div>
@@ -284,29 +246,20 @@
                     </div>
                 </div>
             </div>
-
-            <button @click="openExpenseModal()" class="fixed bottom-24 right-6 w-14 h-14 bg-accent text-text rounded-full shadow-lg flex items-center justify-center text-2xl hover:scale-110 active:scale-90 transition-transform z-30 font-bold">
-                <i class="fa-solid fa-plus"></i>
-            </button>
+            <button @click="openExpenseModal()" class="fixed bottom-24 right-6 w-14 h-14 bg-accent text-text rounded-full shadow-lg flex items-center justify-center text-2xl hover:scale-110 active:scale-90 transition-transform z-30 font-bold"><i class="fa-solid fa-plus"></i></button>
         </div>
 
         <div v-if="currentTab === 'planning'" class="animate-fade-in pb-24">
-             
              <div class="flex justify-between items-end mb-4">
                  <h2 class="text-xl font-bold">待辦清單</h2>
-                 <button @click="openTodoModal()" class="text-sm bg-primary/10 text-primary px-3 py-1 rounded-full font-bold">
-                     <i class="fa-solid fa-plus mr-1"></i>新增
-                 </button>
+                 <button @click="openTodoModal()" class="text-sm bg-primary/10 text-primary px-3 py-1 rounded-full font-bold"><i class="fa-solid fa-plus mr-1"></i>新增</button>
              </div>
-
              <div class="space-y-2 mb-8">
                 <div v-for="todo in todos" :key="todo.id" class="flex items-center bg-white p-3 rounded-xl shadow-sm group">
                     <div @click="todo.done = !todo.done" :class="['w-5 h-5 rounded-md border-2 mr-3 flex items-center justify-center transition-colors cursor-pointer shrink-0', todo.done ? 'bg-primary border-primary' : 'border-gray-300']">
                         <i v-if="todo.done" class="fa-solid fa-check text-white text-xs"></i>
                     </div>
-                    <span @click="openTodoModal(todo)" :class="['font-medium flex-1 cursor-pointer hover:text-primary transition-colors', todo.done ? 'text-gray-400 line-through' : 'text-text']">
-                        {{ todo.text }}
-                    </span>
+                    <span @click="openTodoModal(todo)" :class="['font-medium flex-1 cursor-pointer hover:text-primary transition-colors', todo.done ? 'text-gray-400 line-through' : 'text-text']">{{ todo.text }}</span>
                     <i @click="openTodoModal(todo)" class="fa-solid fa-pen text-gray-300 text-xs px-2 cursor-pointer hover:text-primary"></i>
                 </div>
              </div>
@@ -315,16 +268,12 @@
                  <h2 class="text-xl font-bold">購物清單</h2>
                  <button @click="showShoppingModal = true" class="text-sm bg-primary/10 text-primary px-3 py-1 rounded-full font-bold">新增物品</button>
              </div>
-             
              <div class="grid grid-cols-2 gap-4">
                 <div v-for="item in shoppingList" :key="item.id" class="bg-white p-2 rounded-xl shadow-soft relative group">
                     <button @click="removeShoppingItem(item.id)" class="absolute top-1 right-1 bg-red-400 text-white w-6 h-6 rounded-full text-xs z-10 shadow-sm">x</button>
                     <div class="h-28 bg-gray-100 rounded-lg mb-2 relative overflow-hidden">
                         <img v-if="item.img" :src="item.img" class="w-full h-full object-cover">
-                        <div v-else class="w-full h-full flex flex-col items-center justify-center text-gray-300">
-                            <i class="fa-solid fa-image mb-1"></i>
-                            <span class="text-[10px]">無圖片</span>
-                        </div>
+                        <div v-else class="w-full h-full flex flex-col items-center justify-center text-gray-300"><i class="fa-solid fa-image mb-1"></i><span class="text-[10px]">無圖片</span></div>
                     </div>
                     <div class="text-center font-bold text-sm truncate px-1">{{ item.name }}</div>
                 </div>
@@ -335,17 +284,28 @@
 
     <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm" @click.self="showAddModal = false">
         <div class="bg-white w-full sm:w-96 rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-slide-up pb-8">
-            <h3 class="text-xl font-bold mb-4">新增行程</h3>
+            <h3 class="text-xl font-bold mb-4">{{ editingEventId ? '修改行程' : '新增行程' }}</h3>
             <div class="space-y-4">
                 <input v-model="newEvent.title" placeholder="行程名稱" class="w-full bg-bg p-3 rounded-xl outline-none focus:ring-2 ring-primary/50">
+                <input v-model="newEvent.location" placeholder="地點 (Google Map)" class="w-full bg-bg p-3 rounded-xl outline-none">
                 <select v-model="newEvent.category" class="w-full bg-bg p-3 rounded-xl outline-none">
                     <option value="spot">📍 景點</option>
                     <option value="food">🍜 美食</option>
                     <option value="shop">🛍️ 購物</option>
                     <option value="hotel">🏨 住宿</option>
+                    <option value="flight">✈️ 航班</option>
                 </select>
-                <input type="time" v-model="newEvent.time" class="w-full bg-bg p-3 rounded-xl outline-none">
-                <button @click="addEvent" class="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg">確認新增</button>
+                <div class="flex gap-2">
+                    <input type="time" v-model="newEvent.time" class="flex-1 bg-bg p-3 rounded-xl outline-none">
+                    <input v-if="newEvent.category !== 'flight'" v-model="newEvent.openTime" placeholder="營業時間" class="flex-1 bg-bg p-3 rounded-xl outline-none text-sm">
+                </div>
+                
+                <div class="flex gap-2 pt-2">
+                    <button v-if="editingEventId" @click="deleteEventInModal" class="w-1/3 bg-red-100 text-red-500 py-3 rounded-xl font-bold shadow-soft">刪除</button>
+                    <button @click="saveEvent" :class="[editingEventId ? 'w-2/3' : 'w-full', 'bg-primary text-white py-3 rounded-xl font-bold shadow-lg']">
+                        {{ editingEventId ? '儲存修改' : '確認新增' }}
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -454,7 +414,6 @@
             const showTodoModal = ref(false);
 
             const bookingType = ref('hotel');
-            // 設定 Header 圖片路徑
             const headerImage = ref('images/f1cat.jpg');
             
             const weatherData = ref({ temp: '--', icon: 'fa-solid fa-spinner fa-spin', desc: 'Loading...' });
@@ -476,12 +435,12 @@
             // --- Events Data ---
             const events = ref({
                 0: [
-                    { id: 1, title: 'TPE -> NRT', category: 'flight', time: '08:50', location: '桃園 T2', subTitle: 'BR198', transportType: 'flight', offsetX: 0, photo: null },
-                    { id: 2, title: 'Check-in 飯店', category: 'hotel', time: '14:30', location: 'Sotetsu Fresa Inn Daimon', transportType: 'train', offsetX: 0, photo: null },
-                    { id: 3, title: '東京鐵塔', category: 'spot', time: '16:00', location: 'Tokyo Tower', openTime: '09:00-23:00', transportType: 'walk', offsetX: 0, photo: null }
+                    { id: 1, title: 'TPE -> NRT', category: 'flight', time: '08:50', location: '桃園 T2', subTitle: 'BR198', transportType: 'flight', transportTime:'-', offsetX: 0, photo: null },
+                    { id: 2, title: 'Check-in 飯店', category: 'hotel', time: '14:30', location: 'Sotetsu Fresa Inn Daimon', transportType: 'train', transportTime:'50 min', offsetX: 0, photo: null },
+                    { id: 3, title: '東京鐵塔', category: 'spot', time: '16:00', location: 'Tokyo Tower', openTime: '09:00-23:00', transportType: 'walk', transportTime:'15 min', offsetX: 0, photo: null }
                 ],
                 1: [
-                    { id: 4, title: '前往迪士尼海洋', category: 'spot', time: '08:00', location: 'DisneySea', transportType: 'train', offsetX: 0, photo: null }
+                    { id: 4, title: '前往迪士尼海洋', category: 'spot', time: '08:00', location: 'DisneySea', transportType: 'train', transportTime:'40 min', offsetX: 0, photo: null }
                 ]
             });
 
@@ -512,13 +471,14 @@
             ]);
 
             // --- Temp Models ---
-            const newEvent = ref({ title: '', category: 'spot', time: '10:00' });
+            const newEvent = ref({ title: '', category: 'spot', time: '10:00', location: '', openTime: '' });
             const newBooking = ref({ name: '', address: '', checkIn: '', checkOut: '', from: '', to: '', code: '', date: '', depTime: '10:00', arrTime: '14:00' });
             const newExpense = ref({ title: '', amount: '', category: 'food' });
             const newShoppingItem = ref({ name: '', img: null });
             const newTodo = ref({ text: '' });
             
             // Editing States
+            const editingEventId = ref(null);
             const editingExpenseId = ref(null);
             const editingTodoId = ref(null);
 
@@ -539,11 +499,9 @@
             const touchMove = (e, item) => {
                 const currentX = e.touches[0].clientX;
                 const diff = currentX - startX;
-                // Left Swipe (Open Delete)
                 if (diff < 0) {
                      if (diff > -100) item.offsetX = diff;
                 } 
-                // Right Swipe (Close/Restore)
                 else if (diff > 0) {
                     if (item.offsetX < 0) {
                          item.offsetX = -80 + diff;
@@ -563,6 +521,8 @@
             };
 
             // --- Methods ---
+            
+            // 0. Weather
             const fetchWeather = async () => {
                 try {
                     const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=35.6895&longitude=139.6917&current_weather=true');
@@ -578,22 +538,94 @@
                 } catch (e) { weatherData.value = { temp: '12', icon: 'fa-solid fa-cloud', desc: '離線顯示' }; }
             };
 
-            // Schedule
-            const addEvent = () => {
-                if(!events.value[selectedDayIndex.value]) events.value[selectedDayIndex.value] = [];
-                events.value[selectedDayIndex.value].push({
-                    id: Date.now(), ...newEvent.value, location: 'TBC', transportType: 'walk', offsetX: 0, photo: null
+            // 1. Schedule Actions (Updated with Edit & Recalc)
+            
+            // Helper: Recalculate Transport Logic
+            const recalculateTransport = (dayIndex) => {
+                if (!events.value[dayIndex]) return;
+                
+                // 1. Sort by time
+                events.value[dayIndex].sort((a,b) => a.time.localeCompare(b.time));
+                
+                // 2. Re-assign simulated transport time
+                events.value[dayIndex].forEach((evt, idx) => {
+                    if(idx === 0) {
+                        evt.transportType = 'flight'; // or none
+                        evt.transportTime = '';
+                    } else {
+                        // Mock Logic: Randomly assign Walk or Train
+                        // 模擬邏輯：隨機分配步行或大眾運輸，時間 5-30 分鐘
+                        const isWalk = Math.random() > 0.5;
+                        evt.transportType = isWalk ? 'walk' : 'train';
+                        evt.transportTime = Math.floor(Math.random() * 25 + 5) + ' min';
+                    }
                 });
-                showAddModal.value = false;
-                newEvent.value = { title: '', category: 'spot', time: '10:00' };
-                events.value[selectedDayIndex.value].sort((a,b) => a.time.localeCompare(b.time));
             };
+
+            const openEventModal = (item = null) => {
+                if (item) {
+                    editingEventId.value = item.id;
+                    newEvent.value = { ...item }; // copy data
+                } else {
+                    editingEventId.value = null;
+                    newEvent.value = { title: '', category: 'spot', time: '10:00', location: '', openTime: '' };
+                }
+                showAddModal.value = true;
+            };
+
+            const handleEventClick = (item) => {
+                // If swiped, close. Else, open edit.
+                if (item.offsetX === -80) item.offsetX = 0;
+                else openEventModal(item);
+            };
+
+            const saveEvent = () => {
+                if(!events.value[selectedDayIndex.value]) events.value[selectedDayIndex.value] = [];
+                const currentList = events.value[selectedDayIndex.value];
+
+                if (editingEventId.value) {
+                    // Update
+                    const index = currentList.findIndex(e => e.id === editingEventId.value);
+                    if (index !== -1) {
+                        currentList[index] = { ...currentList[index], ...newEvent.value };
+                    }
+                } else {
+                    // Create
+                    currentList.push({
+                        id: Date.now(), 
+                        ...newEvent.value, 
+                        transportType: 'walk', 
+                        transportTime: '10 min',
+                        offsetX: 0, 
+                        photo: null
+                    });
+                }
+                
+                showAddModal.value = false;
+                recalculateTransport(selectedDayIndex.value);
+            };
+
             const deleteEvent = (index) => {
-                if(confirm('確定刪除此行程？')) events.value[selectedDayIndex.value].splice(index, 1);
+                if(confirm('確定刪除此行程？')) {
+                    events.value[selectedDayIndex.value].splice(index, 1);
+                    recalculateTransport(selectedDayIndex.value);
+                }
                 else events.value[selectedDayIndex.value][index].offsetX = 0;
             };
 
-            // Booking
+            const deleteEventInModal = () => {
+                if(confirm('確定刪除此行程？')) {
+                    const currentList = events.value[selectedDayIndex.value];
+                    const index = currentList.findIndex(e => e.id === editingEventId.value);
+                    if (index !== -1) {
+                         currentList.splice(index, 1);
+                         recalculateTransport(selectedDayIndex.value);
+                    }
+                    showAddModal.value = false;
+                }
+            };
+
+            // 2. Booking Actions
             const addBooking = () => {
                 if(bookingType.value === 'hotel') {
                     bookings.value.hotels.push({
@@ -612,7 +644,7 @@
             };
             const deleteBooking = (type, index) => { if(confirm('刪除預訂？')) bookings.value[type].splice(index, 1); };
 
-            // Expense (Updated)
+            // 3. Expense Actions
             const openExpenseModal = (item = null) => {
                 if (item) {
                     editingExpenseId.value = item.id;
@@ -623,41 +655,29 @@
                 }
                 showExpenseModal.value = true;
             };
-
             const handleExpenseClick = (item) => {
-                // If swiped open, close it. If closed, edit it.
-                if (item.offsetX === -80) {
-                    item.offsetX = 0;
-                } else {
-                    openExpenseModal(item);
-                }
+                if (item.offsetX === -80) item.offsetX = 0;
+                else openExpenseModal(item);
             };
-
             const saveExpense = () => {
                 if (editingExpenseId.value) {
-                    // Update
                     const index = expenses.value.findIndex(e => e.id === editingExpenseId.value);
-                    if (index !== -1) {
-                        expenses.value[index] = { ...expenses.value[index], ...newExpense.value };
-                    }
+                    if (index !== -1) expenses.value[index] = { ...expenses.value[index], ...newExpense.value };
                 } else {
-                    // Create
                     expenses.value.unshift({
                         id: Date.now(), title: newExpense.value.title || '一般支出', 
                         amount: Number(newExpense.value.amount) || 0, category: newExpense.value.category,
-                        date: new Date().toLocaleDateString('en-US', {month:'2-digit', day:'2-digit'}),
-                        offsetX: 0
+                        date: new Date().toLocaleDateString('en-US', {month:'2-digit', day:'2-digit'}), offsetX: 0
                     });
                 }
                 showExpenseModal.value = false;
             };
-
             const deleteExpense = (index) => {
                 if(confirm('刪除此筆記帳？')) expenses.value.splice(index, 1);
                 else expenses.value[index].offsetX = 0;
             };
 
-            // Todo (Updated)
+            // 4. Todo Actions
             const openTodoModal = (item = null) => {
                 if (item) {
                     editingTodoId.value = item.id;
@@ -668,19 +688,15 @@
                 }
                 showTodoModal.value = true;
             };
-
             const saveTodo = () => {
                 if (editingTodoId.value) {
                     const todo = todos.value.find(t => t.id === editingTodoId.value);
                     if (todo) todo.text = newTodo.value.text;
                 } else {
-                    if (newTodo.value.text) {
-                        todos.value.push({ id: Date.now(), text: newTodo.value.text, done: false });
-                    }
+                    if (newTodo.value.text) todos.value.push({ id: Date.now(), text: newTodo.value.text, done: false });
                 }
                 showTodoModal.value = false;
             };
-
             const deleteTodo = () => {
                 if(confirm('確定刪除此待辦事項？')) {
                     todos.value = todos.value.filter(t => t.id !== editingTodoId.value);
@@ -688,7 +704,7 @@
                 }
             };
 
-            // Shopping
+            // 5. Shopping Actions
             const triggerShoppingUpload = () => document.getElementById('shoppingFile').click();
             const handleShoppingPhoto = (e) => {
                 const file = e.target.files[0];
@@ -732,9 +748,7 @@
             const getCategoryColor = (cat) => ({ flight:'#3B82F6', spot:'#FF8E8E', food:'#F59E0B', hotel:'#8B5CF6', shop:'#10B981' }[cat] || '#9CA3AF');
             const getCategoryIcon = (cat) => ({ transport:'🚆', food:'🍱', shop:'🛍️', ticket:'🎫' }[cat] || '💰');
             const getTransportIcon = (type) => (type === 'walk' ? 'fa-solid fa-person-walking' : 'fa-solid fa-train-subway');
-            const getTransportTime = (idx) => (['45 min', '15 min', '10 min'][idx % 3]);
             const openMap = (loc) => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank');
-            // 如果圖片載入失敗，顯示預設圖
             const handleImgError = (e) => e.target.src = "https://placehold.co/1920x400/E6C683/FFFFFF?text=F1+Cat+Banner";
 
             onMounted(() => fetchWeather());
@@ -745,13 +759,14 @@
                 totalExpense, totalExpenseJpy, 
                 showAddModal, showBookingModal, showExpenseModal, showShoppingModal, showTodoModal,
                 bookingType, newEvent, newBooking, newExpense, newShoppingItem, newTodo, headerImage, weatherData, isSwiping,
-                editingExpenseId, editingTodoId,
-                addEvent, deleteEvent, touchStart, touchMove, touchEnd, resetSwipes,
+                editingEventId, editingExpenseId, editingTodoId,
+                openEventModal, saveEvent, deleteEvent, deleteEventInModal, handleEventClick,
+                touchStart, touchMove, touchEnd, resetSwipes,
                 addBooking, deleteBooking, 
                 openExpenseModal, saveExpense, deleteExpense, handleExpenseClick,
                 openTodoModal, saveTodo, deleteTodo,
                 addShoppingItem, removeShoppingItem,
-                getCategoryColor, getCategoryIcon, getTransportIcon, getTransportTime, openMap, handleImgError,
+                getCategoryColor, getCategoryIcon, getTransportIcon, openMap, handleImgError,
                 triggerPhotoUpload, handlePhotoUpload, handleBookingPhoto, triggerShoppingUpload, handleShoppingPhoto
             };
         }
