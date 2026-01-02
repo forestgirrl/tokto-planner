@@ -53,6 +53,7 @@
             background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='12' ry='12' stroke='%23CBD5E1FF' stroke-width='2' stroke-dasharray='6%2c 6' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
         }
         .no-select { user-select: none; -webkit-user-select: none; }
+        /* Animation */
         @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
         @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -107,7 +108,7 @@
             </div>
 
             <div class="mb-6">
-                <button @click="openEventModal(null, 'flight')" class="w-full bg-white border-2 border-dashed border-primary/40 text-primary py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-primary/5 transition-colors shadow-sm">
+                <button @click="openEventModal(null, 'flight')" class="w-full border-2 border-dashed border-primary/40 text-primary py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-primary/5 transition-colors">
                     <i class="fa-solid fa-plane"></i>
                     <span>新增當日航班資訊</span>
                 </button>
@@ -141,10 +142,11 @@
                                     <div v-if="event.category === 'flight'" class="text-[10px] text-blue-500 font-bold mb-1"><i class="fa-solid fa-plane-departure"></i> 航班</div>
                                     <h3 class="font-bold text-lg leading-tight text-text line-clamp-1">{{ event.title }}</h3>
                                     
-                                    <p v-if="event.note" class="text-[10px] text-gray-400 mt-0.5 line-clamp-1 flex items-center gap-1">
-                                        <i class="fa-regular fa-note-sticky text-primary/70"></i> {{ event.note }}
-                                    </p>
-                                    
+                                    <div v-if="event.note" class="text-[10px] text-primary font-medium mt-0.5 flex items-center gap-1">
+                                        <i class="fa-solid fa-sticky-note opacity-70"></i>
+                                        <span class="line-clamp-1">{{ event.note }}</span>
+                                    </div>
+
                                     <div class="text-xs text-gray-400 mt-1 flex items-center gap-1 cursor-pointer hover:text-blue-500 transition-colors"
                                          @click.stop="openMap(event.location)">
                                         <i class="fa-solid fa-location-dot text-primary text-[10px]"></i> 
@@ -153,7 +155,7 @@
                                 </div>
                                 <div class="flex flex-wrap gap-1 mt-2">
                                      <span class="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md">
-                                        {{ event.category === 'flight' ? (event.date || '當日') : (event.openTime || '營業中') }}
+                                        {{ event.category === 'flight' ? (event.subTitle || '航班資訊') : (event.openTime || '行程資訊') }}
                                     </span>
                                 </div>
                             </div>
@@ -179,7 +181,7 @@
         </div>
 
         <div v-if="currentTab === 'bookings'" class="animate-fade-in space-y-5 pb-24">
-            <div class="flex justify-between items-end mb-2">
+             <div class="flex justify-between items-end mb-2">
                 <h2 class="text-xl font-bold">住宿 & 航班</h2>
                 <button @click="openBookingModal(null, 'hotel')" class="text-sm bg-primary/10 text-primary px-3 py-1 rounded-full font-bold">
                     <i class="fa-solid fa-plus mr-1"></i>新增
@@ -189,6 +191,7 @@
             <div v-for="(hotel, idx) in bookings.hotels" :key="'h'+hotel.id" 
                  class="bg-white rounded-2xl overflow-hidden shadow-soft relative group transition-transform active:scale-[0.99] cursor-pointer"
                  @click="openBookingModal(hotel, 'hotel')">
+                
                 <div class="h-40 bg-gray-200 relative cursor-pointer" @click.stop="triggerPhotoUpload('hotel-'+hotel.id)">
                     <img :src="hotel.img" class="w-full h-full object-cover transition-opacity hover:opacity-90" @error="handleImgError">
                     <input type="file" :id="'file-hotel-'+hotel.id" class="hidden" accept="image/*" @change="(e) => handleBookingPhoto(e, hotel)">
@@ -199,6 +202,7 @@
                         <i class="fa-solid fa-pen mr-1"></i>編輯
                     </div>
                 </div>
+                
                 <div class="p-4">
                     <h3 class="font-bold text-lg mb-1 text-gray-800 leading-tight">{{ hotel.name }}</h3>
                     <p class="text-xs text-blue-500 mb-3 cursor-pointer underline decoration-dashed hover:text-blue-600 transition-colors" 
@@ -218,15 +222,15 @@
                 </div>
             </div>
         </div>
-
+        
         </main>
 
     <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in" @click.self="showAddModal = false">
         <div class="bg-white w-full sm:w-96 rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-slide-up pb-8">
-            <h3 class="text-xl font-bold mb-4">{{ editingEventId ? '修改行程' : '新增資訊' }}</h3>
+            <h3 class="text-xl font-bold mb-4">{{ editingEventId ? '修改資訊' : '新增資訊' }}</h3>
             <div class="space-y-4">
-                <input v-model="newEvent.title" :placeholder="newEvent.category === 'flight' ? '航班編號 (例: BR198)' : '景點/行程名稱'" class="w-full bg-bg p-3 rounded-xl outline-none focus:ring-2 ring-primary/50">
-                <input v-model="newEvent.location" :placeholder="newEvent.category === 'flight' ? '機場/地點' : '詳細地址'" class="w-full bg-bg p-3 rounded-xl outline-none">
+                <input v-model="newEvent.title" placeholder="標題 (航班編號/景點名稱)" class="w-full bg-bg p-3 rounded-xl outline-none focus:ring-2 ring-primary/50">
+                <input v-model="newEvent.location" placeholder="地點 (機場/地址)" class="w-full bg-bg p-3 rounded-xl outline-none">
                 
                 <div class="flex gap-2">
                     <input type="time" v-model="newEvent.time" class="w-1/2 bg-bg p-3 rounded-xl outline-none">
@@ -238,16 +242,13 @@
                         <option value="shop">🛍️ 購物</option>
                     </select>
                 </div>
-                
-                <div class="relative">
-                    <i class="fa-regular fa-note-sticky absolute left-4 top-4 text-gray-400"></i>
-                    <textarea v-model="newEvent.note" placeholder="新增備註 (例: 登機門編號、必買物品...)" class="w-full bg-bg p-3 pl-10 rounded-xl outline-none resize-none h-24 text-sm"></textarea>
-                </div>
+
+                <textarea v-model="newEvent.note" placeholder="新增備註 (例：登機門、必買清單等)" class="w-full bg-bg p-3 rounded-xl outline-none h-24 resize-none"></textarea>
                 
                 <div class="flex gap-2 pt-2">
                     <button v-if="editingEventId" @click="deleteEventInModal" class="w-1/3 bg-red-100 text-red-500 py-3 rounded-xl font-bold">刪除</button>
                     <button @click="saveEvent" :class="[editingEventId ? 'w-2/3' : 'w-full', 'bg-primary text-white py-3 rounded-xl font-bold shadow-lg']">
-                        {{ editingEventId ? '儲存修改' : '確認新增' }}
+                        儲存
                     </button>
                 </div>
             </div>
@@ -261,10 +262,10 @@
 
     createApp({
         setup() {
-            // --- Basic Data ---
             const currentTab = ref('schedule');
             const selectedDayIndex = ref(0);
             const showAddModal = ref(false);
+            const editingEventId = ref(null);
             const headerImage = ref('images/f1cat.jpg'); 
             const weatherData = ref({ temp: '--', icon: 'fa-solid fa-spinner fa-spin', desc: 'Loading...' });
 
@@ -283,48 +284,39 @@
                 { date: '11', weekday: 'SUN' },
             ];
 
-            // --- Events Data ---
+            // 範例資料結構中加入 note
             const events = ref({
                 0: [
                     { id: 1, title: 'TPE -> NRT', category: 'flight', time: '08:50', location: '桃園 T2', subTitle: 'BR198', offsetX: 0, photo: null, note: '提早2.5小時到機場' },
-                    { id: 2, title: 'Check-in 飯店', category: 'hotel', time: '14:30', location: 'Sotetsu Fresa Inn Daimon', offsetX: 0, photo: null, note: '大廳在二樓' },
+                    { id: 2, title: '飯店 Check-in', category: 'hotel', time: '14:30', location: 'Sotetsu Fresa Inn Daimon', offsetX: 0, photo: null, note: '大廳在二樓' },
                 ]
             });
 
-            // --- Bookings Data ---
+            // 預設表單中加入 note
+            const newEvent = ref({ title: '', category: 'spot', time: '10:00', location: '', note: '' });
+
             const bookings = ref({
                 hotels: [
                     { id: 1, name: 'Sotetsu Fresa Inn大門站', address: 'Sotetsu Fresa Inn Daimon', checkIn: '01/03', checkOut: '01/05', nights: 2, img: 'images/hotel01.jpg' },
-                ]
+                ],
+                flights: []
             });
 
-            // --- Temp Models ---
-            const newEvent = ref({ title: '', category: 'spot', time: '10:00', location: '', openTime: '', note: '' });
-            const editingEventId = ref(null);
-
-            // --- Computed ---
             const currentDayEvents = computed(() => {
                 const list = events.value[selectedDayIndex.value] || [];
-                // 依時間排序行程
+                // 保持時間排序
                 return [...list].sort((a, b) => a.time.localeCompare(b.time));
             });
 
-            // --- Methods ---
-            
-            const openEventModal = (item = null, category = 'spot') => {
+            const openEventModal = (item = null, defaultCategory = 'spot') => {
                 if (item) {
                     editingEventId.value = item.id;
                     newEvent.value = { ...item };
                 } else {
                     editingEventId.value = null;
-                    newEvent.value = { title: '', category: category, time: '10:00', location: '', openTime: '', note: '' };
+                    newEvent.value = { title: '', category: defaultCategory, time: '10:00', location: '', note: '' };
                 }
                 showAddModal.value = true;
-            };
-
-            const handleEventClick = (item) => {
-                if (item.offsetX === -80) item.offsetX = 0;
-                else openEventModal(item);
             };
 
             const saveEvent = () => {
@@ -341,13 +333,13 @@
             };
 
             const deleteEvent = (index) => {
-                if(confirm('確定刪除此資訊？')) {
+                if(confirm('確定要刪除這筆行程嗎？')) {
                     events.value[selectedDayIndex.value].splice(index, 1);
                 }
             };
 
             const deleteEventInModal = () => {
-                 if(confirm('確定刪除此資訊？')) {
+                 if(confirm('確定要刪除這筆行程嗎？')) {
                     const currentList = events.value[selectedDayIndex.value];
                     const index = currentList.findIndex(e => e.id === editingEventId.value);
                     if (index !== -1) currentList.splice(index, 1);
@@ -355,7 +347,12 @@
                 }
             };
 
-            // Swipe Logic
+            const handleEventClick = (item) => {
+                if (item.offsetX === -80) item.offsetX = 0;
+                else openEventModal(item);
+            };
+
+            // 滑動邏輯
             let startX = 0;
             const isSwiping = ref(false);
             const touchStart = (e, item) => { startX = e.touches[0].clientX; isSwiping.value = true; };
@@ -388,7 +385,7 @@
 
             return {
                 currentTab, tabs, scheduleDays, selectedDayIndex, currentDayEvents,
-                events, showAddModal, newEvent, editingEventId, headerImage, weatherData, isSwiping,
+                events, bookings, showAddModal, newEvent, editingEventId, headerImage, weatherData, isSwiping,
                 openEventModal, saveEvent, deleteEvent, deleteEventInModal, handleEventClick,
                 touchStart, touchMove, touchEnd, getCategoryColor, openMap, handleImgError,
                 triggerPhotoUpload, handlePhotoUpload
